@@ -1,0 +1,7 @@
+En este código, replicamos el gráfico del Gobierno de México publicado el 12 de septiembre de 2024 en el que se muestra
+el PIB de la economía mexicana por sexenio en dólares.
+Se corrigen varias cosas, una de ellas es que los datos no estan deflactados por la inflación estadounidense y que la unidad
+de medida no son trillones sino billones de dólares.
+Lo sofisticado de la visualización es haber insertado imagenes dentro del gráfico (aparece la foto de cada presidente referenciando su periodo).
+Además del script, para replicar el análisis es necesario descargar la base de datos de nombre "file.csv" la cual contiene el indice de precios de
+Estados Unidos en todo el periodo y las imagenes de los 5 presidentes.
