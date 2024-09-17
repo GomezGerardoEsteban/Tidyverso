@@ -30,6 +30,9 @@ bases <- bases %>% bind_rows()
 
 bases %>% glimpse()
 
+
+# Procesamiento de los datos ----------------------------------------------
+
 bases$Male.Population <- bases$Male.Population*-1
 
 bases <- bases %>% 
@@ -51,12 +54,6 @@ bases$Country <- factor(bases$Country,
                                 "Colombia:\nPirámde estable",
                                 "Japón:\nPirámide regresiva"))
 
-library(wesanderson)
-library(extrafont)
-loadfonts(device = "win")
-
-colores <- wes_palette(name = "Darjeeling1", n = 2, type = c("discrete"))
-
 bases <- bases %>% 
   filter(variable != "Population" & GROUP != "TOTAL") %>%
   mutate(GROUP = as.numeric(ifelse(GROUP == "100+", "100", GROUP)),
@@ -69,6 +66,32 @@ bases <- bases %>%
                                           end = 6)),
                            levels = c("Male", "Female")))
 
+popag <- bases %>%
+  mutate(Agegr = factor(ifelse(GROUP %in% 0:14, "young",
+                               ifelse(GROUP %in% 15:64, "adult", "old")))) %>%
+  group_by(GENC, variable, Agegr) %>%
+  summarise(Population = sum(valor)) %>%
+  mutate(Population = ifelse(Population < 0, Population*-1, Population)) %>% 
+  ungroup() %>% 
+  group_by(GENC) %>% 
+  mutate(Population_T = sum(Population)) %>% 
+  ungroup() %>% 
+  group_by(GENC, variable) %>% 
+  mutate(PopulationSex_T = sum(Population)) %>% 
+  ungroup() %>% 
+  mutate(PopulationPercent = round(Population/Population_T*100, 1))
+
+
+# seleccion de colores ----------------------------------------------------
+
+library(wesanderson)
+library(extrafont)
+# loadfonts(device = "win")
+
+colores <- wes_palette(name = "Darjeeling1", n = 2, type = c("discrete"))
+
+
+# Grafico conjunto de piramides poblacionales -----------------------------
 
 graficoPob <- bases %>%  
   ggplot(mapping = aes(y = valor,
@@ -109,21 +132,8 @@ graficoPob <- bases %>%
         strip.background = element_rect(fill = "white", linetype = "solid",
                                         color = "black", linewidth = 0.5))
 
-popag <- bases %>%
-  mutate(Agegr = factor(ifelse(GROUP %in% 0:14, "young",
-                               ifelse(GROUP %in% 15:64, "adult", "old")))) %>%
-  group_by(GENC, variable, Agegr) %>%
-  summarise(Population = sum(valor)) %>%
-  mutate(Population = ifelse(Population < 0, Population*-1, Population)) %>% 
-  ungroup() %>% 
-  group_by(GENC) %>% 
-  mutate(Population_T = sum(Population)) %>% 
-  ungroup() %>% 
-  group_by(GENC, variable) %>% 
-  mutate(PopulationSex_T = sum(Population)) %>% 
-  ungroup() %>% 
-  mutate(PopulationPercent = round(Population/Population_T*100, 1))
 
+# Piramide poblacional de Colombia ----------------------------------------
 
 graficoPobCol <- bases %>%
   filter(GENC == "CO") %>%
@@ -240,6 +250,8 @@ graficoPobCol <- bases %>%
 
 
 
+# Piramide poblacional de Kenia -------------------------------------------
+
 graficoPobKen <- bases %>%
   filter(GENC == "KE") %>%
   ggplot(mapping = aes(y = valor,
@@ -354,6 +366,7 @@ graficoPobKen <- bases %>%
                                         color = "black", linewidth = 0.5))
 
 
+# Piramide poblacional de Japon -------------------------------------------
 
 graficoPobJap <- bases %>%
   filter(GENC == "JP") %>%
@@ -469,7 +482,8 @@ graficoPobJap <- bases %>%
                                         color = "black", linewidth = 0.5))
 
 
-graficoPobJap
+
+# Almacenamiento de los graficos para no perder resolución ----------------
 
 ggsave(filename = "resultados/grafico_pob.png",
        plot = graficoPob,
@@ -494,5 +508,4 @@ ggsave(filename = "resultados/grafico_pob_jap.png",
        width = 8.36,
        height = 5.81,
        dpi = 500)
-
 
