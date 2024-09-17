@@ -1,0 +1,4 @@
+Esta carpeta contiene el código para replicar las visulizaciones de piramides poblacionales en R
+los datos provienen de la U.S. Census Bureau, los archivos de datos para replicar el código son
+populationCol.csv, populationKen.csv y populationJap.csv
+el script esta almacenado con el nombre piramidesPoblacionales.R
