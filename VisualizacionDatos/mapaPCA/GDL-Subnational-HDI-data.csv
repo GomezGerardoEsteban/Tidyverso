@@ -1,0 +1,35 @@
+Country,Continent,ISO_Code,Level,GDLCODE,Region,"2021"
+"Colombia","America","COL","National","COLt","Total",0.752
+"Colombia","America","COL","Subnat","COLr129","Amazonas",0.702
+"Colombia","America","COL","Subnat","COLr101","Antioquia (incl Medellin)",0.757
+"Colombia","America","COL","Subnat","COLr125","Arauca",0.725
+"Colombia","America","COL","Subnat","COLr102","Atlantico (incl Barranquilla)",0.771
+"Colombia","America","COL","Subnat","COLr103","Bogota D.C.",0.797
+"Colombia","America","COL","Subnat","COLr104","Bolivar (Sur and Norte)",0.741
+"Colombia","America","COL","Subnat","COLr105","Boyaca",0.745
+"Colombia","America","COL","Subnat","COLr106","Caldas",0.763
+"Colombia","America","COL","Subnat","COLr107","Caqueta",0.703
+"Colombia","America","COL","Subnat","COLr126","Casanare",0.735
+"Colombia","America","COL","Subnat","COLr108","Cauca",0.705
+"Colombia","America","COL","Subnat","COLr109","Cesar",0.715
+"Colombia","America","COL","Subnat","COLr112","Choco",0.682
+"Colombia","America","COL","Subnat","COLr110","Cordoba",0.702
+"Colombia","America","COL","Subnat","COLr111","Cundinamarca",0.759
+"Colombia","America","COL","Subnat","COLr130","Guainja",0.656
+"Colombia","America","COL","Subnat","COLr114","Guajira",0.681
+"Colombia","America","COL","Subnat","COLr131","Guaviare",0.740
+"Colombia","America","COL","Subnat","COLr113","Huila",0.711
+"Colombia","America","COL","Subnat","COLr115","Magdalena",0.711
+"Colombia","America","COL","Subnat","COLr116","Meta",0.762
+"Colombia","America","COL","Subnat","COLr117","Narino",0.707
+"Colombia","America","COL","Subnat","COLr118","Norte de Santander",0.734
+"Colombia","America","COL","Subnat","COLr127","Putumayo",0.703
+"Colombia","America","COL","Subnat","COLr119","Quindio",0.769
+"Colombia","America","COL","Subnat","COLr120","Risaralda",0.746
+"Colombia","America","COL","Subnat","COLr128","San Andres",0.774
+"Colombia","America","COL","Subnat","COLr121","Santander",0.762
+"Colombia","America","COL","Subnat","COLr122","Sucre",0.729
+"Colombia","America","COL","Subnat","COLr123","Tolima",0.732
+"Colombia","America","COL","Subnat","COLr124","Valle (incl Cali)",0.776
+"Colombia","America","COL","Subnat","COLr132","Vaupis",0.625
+"Colombia","America","COL","Subnat","COLr133","Vichada",0.739
