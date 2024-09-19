@@ -1,0 +1,7 @@
+Esta carpeta contiene los archivos necesarios para replicar el Análisis de Componentes Principales en el cual
+se generá un índice de acceso a servicios energéticos por departamento en Colombia.
+Los archivos necesarios para ese análisis son:
+- MGN_DPTO_POLITICO.shp # Documento que contiene las geometrias de los departamentos de Colombia
+- IPEM.RData # El cual contiene los datos de acceso a distintos servicios energéticos por departamento
+- GDL-Subnational-HDI-data.csv # El cual contiene los valores del Indice de Desarrollo Humano para los distintos departamentos de Colombia 
+- indicePobrezaEnergtica.R # En el cual se desarrolla el código con el ACP y la visualización
