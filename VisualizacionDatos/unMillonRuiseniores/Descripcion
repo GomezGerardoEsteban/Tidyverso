@@ -1,0 +1,7 @@
+En esta carpeta se encuentra lo necesario para replicar la visualización del mapa hidrográfico de Luisiana, el cual se inspira
+en la novela "Un millon de ruiseñores" de Susan Straight, los documentos neesarios son:
+- s_05mr24.shp # Shapefile de Estados Unidos para obtener los limites de Luisiana
+- geonames-population.csv # Documento con las localizaciones geograficas de ciudades
+- hybas_na_lev03_v1c.shp # Shapefile de macrocuencas hidrográficas
+- HydroRIVERS_v10_na # Shapefile de rios de norteamérica
+- unMillonSusanStraight.R # Código para la manipulación de los datos
