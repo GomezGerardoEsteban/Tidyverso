@@ -1,0 +1,59 @@
+rm(list = ls())
+
+library(tidyverse)
+
+df <- tibble(x = 0:10,
+             y = 0:10)
+
+argumento <- df %>% 
+  ggplot(mapping = aes(x = x, y = y)) +
+  geom_segment(mapping = aes(x = 3.3, xend = 6.6, y = 5, yend = 5)) +
+  geom_point(x = 3.3,
+             y = 5) +
+  geom_point(x = 6.6,
+             y = 5) +
+  geom_point(x = 3,
+             y = 5.2, color = "darkred") +
+  geom_point(x = 7,
+             y = 4.8, color = "darkblue") +
+  annotate(geom = "text",
+           x = c(3,7,5,5,5),
+           y = c(5,5,6.5,3.5,5.1),
+           label = c("State", "Society","Public Goods","Pay Taxes", "Negotiation"),
+           size = c(5,5,4,4,3.5),
+           color = c("darkred", "darkblue", "darkred", "darkblue", "black"),
+           alpha = c(1,1,0.7,0.7,1)) +
+  annotate(geom = "curve",
+           x = 3,
+           y = 5.2,
+           xend = 7,
+           yend = 5.2,
+           alpha = 0.5,
+           curvature = -0.5,
+           linewidth = 1.2,
+           arrow = arrow(length = unit(0.5, "cm")),
+           color = "darkred") +
+  annotate(geom = "curve",
+           x = 7,
+           y = 4.8,
+           xend = 3,
+           yend = 4.8,
+           alpha = 0.5,
+           curvature = -0.5,
+           linewidth = 1.2,
+           arrow = arrow(length = unit(0.5, "cm")),
+           color = "darkblue") +
+  scale_y_continuous(limits = c(2.5,7)) +
+  scale_x_continuous(limits = c(2,8)) +
+  theme_minimal() +
+  theme(axis.text = element_blank(),
+        axis.title = element_blank(),
+        panel.grid = element_blank(),
+        plot.background = element_rect(fill = "white"))
+
+ggsave(filename = "argumento.png",
+       plot = argumento,
+       dpi = 500,
+       width = 6.24,
+       height = 4.03
+         )
