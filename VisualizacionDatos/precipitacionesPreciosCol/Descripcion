@@ -1,0 +1,7 @@
+# Titulo: Precipitaciones pluviales y precio promedio de la electricidad en Colombia                                                                               #
+# Tema: Este gráfico muestra la relación observada en Colombia entre el precio mayorista de la electricidad y las precipitaciones pluviales 
+#       entre 1996 y 2020. La base utilizada es "precios_year.Rdata" la cual fue construida a partir de los datos de cambio climatico del
+#       Banco Mundial y la información del precio mayorista de electricidad de XM. Para tener precios constantes se utilizo el Indice de Precios
+#       al consumidor del Banco de la Republica.
+# Author: Gerardo Esteban Gomez-Santiago                                                                                                        #
+# Fecha: 26 de Septiembre de 2024
