@@ -1,0 +1,752 @@
+---
+title: "Análisis de datos, prueba de diferencia de medias *(t-test)* y prueba ANOVA *(ANalysis Of VAriance)*"
+subtitle: "Ejemplo practico a partir del artículo ***Civic Education, Political Discussion, and the Social Transmission of Democratic Knowledge and Values in a New Democracy: Kenya 2002.*** **Finkel, S. E., & Smith, A. E. (2011)**"
+author: "Gerardo Esteban, Gómez-Santiago"
+date: "September 08, 2024"
+toc: true
+csl: apa.csl
+bibliography: export.bib
+format: 
+  html:
+    code-links:
+      - text: Base de datos
+        icon: file-code
+        href: https://github.com/GomezGerardoEsteban/Tidyverso/raw/main/InferenciaEstadistica/tTest_Anova/EF.dta
+      - text: Repositorio GitHub
+        icon: file-code
+        href: https://github.com/GomezGerardoEsteban/Tidyverso/tree/09d22f88ed50867ea33a29030428b550f1b1711c/InferenciaEstadistica/tTest_Anova
+      - text: Paper base
+        icon: file-code
+        href: https://onlinelibrary.wiley.com/doi/epdf/10.1111/j.1540-5907.2010.00493.x
+    theme: default
+    html-math-method: katex
+    code-tools: true
+    self-contained: true
+execute:
+  warning: false
+---
+
+## Introducción
+
+Dentro del análisis de datos, una de las tareas mas comunes e informativas es **comparar los promedios de una variable cuantitativa entre distintos grupos**. Este análisis, además de ser descriptivo, permite empezar a generar conjeturas acerca de la relación entre las variables e incluso, en algunos casos, puede ser suficiente para justificar un argumento o una hipótesis de investigación.\
+Cómo es usual en análisis de datos en ciencias sociales *(también en casi todas las disciplinas cientificas, no solo las sociales)*, los datos disponibles se corresponden con muestras poblacionales que, si fueron seleccionadas de manera **ALEATORIA**, nos permiten hacer inferencias respecto al comportamiento o los valores parametricos de la población.
+
+Los datos del artículo en el que se basa este tutorial, que buscan medir el efecto de la educación cívica en el comportamiento y la adopción de normas democráticas, son una muestra obtenida en Kenya entre 2001 y 2002, en el marco de las elecciones presidenciales celebradas en ese país durante 2002.\
+
+::: {.callout-note appearance="simple"}
+El objetivo de este tutorial es utilizar los principios de la inferencia estadística, presentes en la prueba de diferencia de medias y en la prueba ANOVA, para determinar si existen diferencias significativas en el promedio de una medida individual de **Tolerancia Política**, en función del número de clases o talleres de educación cívica recibidos.
+:::
+
+Es importante aclarar que este tutorial no replica los resultados del estudio, el mismo hace uso de un método de inferencia causal conocido como efectos fijos (Fixxed Effects) cuyo tutorial se realizará más adelante (una explicación completa de este método se encuentra disponible en [Breviarios Digitales: Estrategias de identificación - Laboratorio de Métodos Flacso](https://drive.google.com/file/d/1lqguBE1e8VKX06RCKJTBc8mTPlQ3I2-G/view)). Sin embargo, los resultados obtenidos no son contradictorios con los obtenidos por [@finkel2011], siendo este un ejercicio introductorio que resulta útil para entender dicho estudio.
+
+A continuación se presenta la contextualización del estudio, una breve explicación teórica de la estadística detras de las pruebas a realizar y el paso a paso del código en lenguaje R.
+
+## Contextualización del estudio
+
+Los autores tienen interes en contrastar si la educación cívica y de manera mas específica si los talleres de educación cívica con metodologías de enseñanza participativa, tienen influencia sobre las actitudes, los valores y las orientaciones de participación en nuevas democracias.\
+Desde el punto de vista de la teoría política, este estudio discute con los aportes previos de [@almond1989] y [@lipset1959] que consideran que las conductas y los valores democraticos solo pueden construirse en el largo plazo.
+
+Los autores, además de plantear que la educación civica tendría un efecto positivo sobre la tolerancia política, plantean que los individuos menos educados y con menor integración social van a experimentar un mayor efecto en el cambio de sus actitudes, valores y comportamientos.\
+En nuestro análisis nos centraremos solamente en la primera hipótesis, la cual podemos expresar formalmente como:
+
+$$\frac{\partial Tolerancia \hspace{0.1cm} Política}{\partial Educación \hspace{0.1cm} Cívica} > 0$$
+
+Con respecto al contexto político del espacio donde se realizó el estudio, es importante destacar que los talleres de educación cívica enmarcados en el *National Civic Education Program (NCEP)*, se realizarón en la prevía de las primeras elecciones libres y competitivas por la presidencia de Kenya.\
+La salida del poder de [Daniel Arap Moi](https://es.wikipedia.org/wiki/Daniel_arap_Moi), quien era el presidente desde 1978, enfrentaba a [Mwai Kibaki](https://es.wikipedia.org/wiki/Mwai_Kibaki), opositor en representación de la Coalición Nacional del Arco Iris (*NARC party*) con [Uhuru Kenyatta](https://es.wikipedia.org/wiki/Uhuru_Kenyatta), quien hacia parte de la Unión Nacional Africana de Kenya (KANU por sus siglas en ingles), partido que gobernaba al país desde su independencia en 1963.\
+Si bien la ausencia de comportamientos democráticos no puede atribuirse a un factor único, una de las condiciones que [@finkel2011] presentan como relevante al respecto, es la prevalencia en la ciudadania de su identificación tribal por sobre la identificación nacional, lo que conduce a una constante tensión y amenaza de guerra civil, observable en la ausencia de **Tolerancia Política**.
+
+Entre fines de 2001 y diciembre de 2002 cuando se realizáron las elecciones, se llevaron adelante mas de 50,000 talleres de educación cívica con cerca de 4.5 millones de participantes.\
+Para el estudio se seleccionaron aleatoriamente 2,601 individuos que fueron encuestados antes y despues de los talleres, estos se dividieron entre tratados (asistieron al menos a un taller) y no tratados (nunca asistieron a  talleres) buscando un emparejamiento de los grupos en variables sociodemográficas como edad, genero, etnia, nivel educativo y vecindario.
+
+Teniendo en cuenta que el objetivo del tutorial es ver la diferencia en la tolerancia política en función del número de talleres educativos tomados, trabajaremos solamente con las encuestas post-tratamiento, realizadas tanto a los que asistieron a algún taller (grupo de tratamiento) como a los que no asistieron a ninguno (grupo de control).
+
+## Teoría estadistica
+
+Tanto en el análisis de diferencia de medias como en el análisis de varianza (en adelante ANOVA), lo subyacente es una prueba de hipótesis sobre el valor de los promedios. Ambos hacen uso de los principios de la inferencia estadistica para establecer bajo cierto nivel de confianza $(1 - \alpha)$, si existe diferencia en las medias poblacionales $(\mu_i)$ de la variable de interes, a partir de los valores muestrales obtenidos $(\bar{X}_i)$.
+
+La diferencia entre uno y otro solamente es el alcance, mientras la diferencia de medias permite hacer comparaciones solamente entre dos grupos, la prueba ANOVA permite hacer comparaciones entre *k* grupos, siendo *k* mayor o igual a 2.  
+
+En función de lo anterior, es esencial entender la lógica subyacente a la prueba de hipótesis, antes de pasar a las estimaciones en el lenguaje de programación R.
+
+### Prueba de hipótesis
+
+Cuando se estima el valor de un parametro a partir de un conjunto de datos muestrales, una manera de tener mayor certeza sobre el verdadero valor del parametro es a partir de la construcción de intervalos de confianza, los cuales nos aseguran con un alto grado de probabilidad $(1 - \alpha)$, que el verdadero valor del parametro se encuentra contenido entre dos límites.
+
+Hago referencia a los intervalos de confianza porque la lógica subyacente a la prueba de hipótesis, no es otra cosa que verificar si un valor hipótetico que llamaremos $\mu_0$, se encuentra contenido dentro de esos intervalos.\
+Ampliando el argumento de los intervalos de confianza a la comparación entre dos valores muestrales, como puede ser la media de un grupo A $(\bar{X}_a)$ y la media de un grupo B $(\bar{X}_b)$, lo que determina que $\mu_a \neq \mu_b$ es que el intervalo de confianza de $\bar{X}_a$ no coincida con el intervalo de confianza de $\bar{X}_b$. Este ultimo argumento puede extenderse a *k* grupos, dando lugar a una regla mas general y muy simple a partir de los intervalos de confianza.
+
+::: {.callout-note appearance="simple"}
+Siempre que los intervalos de confianza de la media muestral entre dos o más grupos coincidan, no puede asegurarse que existe diferencia en la media poblacional de esos grupos.
+:::
+
+Un ejemplo gráfico puede aclarar la idea, en el siguiente gráfico se observa que los intervalos al $95\%$ de confianza de la media de A y B no coinciden en ningún punto, por lo tanto, podemos afirmar que la media de A y la media de B son significativamente diferentes.
+
+```{r message=FALSE, warning=FALSE, echo=FALSE}
+
+rm(list = ls())
+
+library(tidyverse)
+
+set.seed(12)
+grupoA <- rnorm(100, mean = 3, sd = 1)
+grupoB <- rnorm(100, mean = 5, sd = 1)
+grupoC <- rnorm(100, mean = 3.2, sd = 1)
+
+tabla <- tibble(valores = c(grupoA, grupoB, grupoC),
+                id = c(rep("A", 100), rep("B", 100), rep("C", 100)))
+
+tabla1 <- tabla %>% 
+  group_by(id) %>% 
+  summarise(estimacionP = mean(valores),
+            desvest = sd(valores),
+            n = n(),
+            qTeorico = qt(0.975, df = n-1),
+            se = desvest/sqrt(n)*qTeorico,
+            Li = estimacionP - se,
+            Ls = estimacionP + se)
+
+
+tabla1 %>% 
+  filter(id != "C") %>% 
+  ggplot(mapping = aes(x = id, y = estimacionP)) +
+  geom_point() +
+  geom_errorbar(mapping = aes(ymin = Li, ymax = Ls)) +
+  labs(title = "Intervalos al 95% de confianza de la media de A y B",
+       x = "Grupo",
+       y = "Valor")
+
+```
+
+Ahora agreguemos las mediciones de un tercer grupo con nombre C, vemos que si bien tiene un valor promedio algo superior al de A, sus intervalos de confianza coinciden. Por lo tanto, podemos afirmar que las medias de A y C son significativamente diferentes a la media de B, pero que no existe una diferencia significativa entre A y C.
+
+```{r message=FALSE, warning=FALSE, echo=FALSE}
+
+tabla1 %>% 
+  # filter(id != "C") %>% 
+  ggplot(mapping = aes(x = id, y = estimacionP)) +
+  geom_point() +
+  geom_errorbar(mapping = aes(ymin = Li, ymax = Ls)) +
+  labs(title = "Intervalos al 95% de confianza de la media de A, B y C",
+       x = "Grupo",
+       y = "Valor")
+
+
+
+```
+
+Esta es una manera sencilla de ver que es lo que subyace tanto al test de diferencia de medias como a la prueba ANOVA, ambos pueden ser entendidos desde los intervalos de confianza de las medias de los grupos.
+
+Ahora bien, siendo un poco mas rigurosos, tanto en la prueba de diferencia de medias como en la prueba ANOVA, lo que hacemos es obtener un test estadístico que se compara con una distribución de probabilidad teórica, la cual tiene definidas zonas de aceptación y rechazo de la hipótesis nula.\
+En el caso de la diferencia de medias la distribución teórica es la [t-Student](https://es.wikipedia.org/wiki/Distribuci%C3%B3n_t_de_Student), mientras que en la prueba ANOVA es la [F de Fisher-Snedecor](https://es.wikipedia.org/wiki/Distribuci%C3%B3n_F). En ambos casos, el valor del test estadístico obtenido se ubica dentro de su respectiva distribución teórica, determinando si se encuentra en una zona de aceptación o rechazo de la hipótesis nula *(criterio del valor crítico)*.
+
+A continuación se presenta una muestra gráfica de esto ultimo, en el gráfico se observa la distribución t-Student con 1000 grados de libertad. En una prueba de hipótesis de diferencia de medias de dos colas[^1], las zonas azul claro son definidas como zonas de rechazo de la hipótesis nula, por lo tanto, si el valor del test estadistico obtenido se ubica en alguna de esas zonas (es mayor a `r round(qt(0.975,1000),2)` o menor a `r round(qt(0.025,1000),2)`) entonces se rechaza la hipótesis nula de igualdad de medias y podemos afirmar que existe una diferencia significativa entre la media de los grupos.[^2]
+
+[^1]: La prueba de hipótesis de dos colas plantea como hipótesis nula que las medias de los dos grupos son iguales, en las pruebas de una cola se plantea que la media de un grupo es mayor o menor a la del otro grupo.
+
+[^2]: La similitud de la distribución t-Student con la distribución normal es evidente, en la medida que el número de grados de libertad se incrementa, la distribución t-Student tiende a la normal.
+
+```{r message=FALSE, warning=FALSE, echo=FALSE}
+
+dist <- tibble(x = seq(-3,3, by = 0.05),
+               y = dt(x, df = 1000))
+
+library(ggtext)
+
+dist %>% 
+  ggplot() +
+  geom_point(mapping = aes(x = x, y = y)) +
+  geom_rect(mapping = aes(xmin = -3, xmax = qt(0.025, 1000),
+                          ymin = 0, ymax = 0.1), fill= "lightblue", alpha = 0.01) +
+  geom_rect(mapping = aes(xmin = qt(0.975, 1000), xmax = 3,
+                          ymin = 0, ymax = 0.1), fill= "lightblue", alpha = 0.01) +
+  scale_x_continuous(breaks = c(round(qt(0.025, 1000),3), 0, round(qt(0.975, 1000),3))) +
+  labs(x = NULL,
+       y = "Densidad",
+       title = "Función de densidad de la distribución t-Student con 1000 grados de libertad",
+       subtitle = "<span style='color:darkgray;'>Zonas de </span><span style='color:lightblue;'>**RECHAZO**</span> <span style='color:darkgray;'>de la **Hipótesis nula**</span>") +
+  theme(plot.subtitle = element_markdown(),
+        panel.background = element_rect(fill="white"),
+        panel.grid.major = element_line(colour = "gray"))
+
+
+```
+
+El valor del test estadistico no solo sirve para determinar si se cae en una zona de aceptación o rechazo de la hipótesis nula, tambien sirve para calcular el **P-Valor**, que se define como la probabilidad de que cierto valor se observe dado que la hipótesis nula es cierta. Siempre que el p-valor sea menor al nivel de significancia ($\alpha$), se rechaza la hipótesis nula.\
+El nivel de significancia se define como el complemento del nivel de confianza, es decir, si nuestro nivel de confianza es del $95\%$, el nivel de significancia es del $5\%$ o del $0.05$. Por lo tanto, si el p-valor es menor al $0.05$, se rechaza la hipótesis nula de que las medias son iguales. 
+
+Una vez que se entendio en terminos generales que es lo que subyace a la prueba de hipótesis, la expresión formal de la prueba de igualdad de medias entre dos poblaciones (test de diferencia de medias) y entre dos o mas poblaciones (test ANOVA) es:
+
+| Tipo de prueba | Hipótesis Nula | Hipótesis Alternativa |
+|:--------------:|:--------------:|:---------------------:|
+| Test diferencia de medias | $H_0:\mu_a = \mu_b$ | $H_1:\mu_a \neq \mu_b$ |
+| Test ANOVA | $H_0:\mu_a = \mu_b = \hspace{0.1cm} ... \hspace{0.1cm} = \mu_k$ | $H_1:$ *al menos las medias de dos poblaciones son diferentes* |
+
+Algo a destacar de la prueba de hipótesis es que siempre se plantea una hipótesis nula y una hipótesis alternativa, las cuales deben ser complementarias y completas respecto a las comparaciones posibles entre las medias.[^3]
+
+[^3]: Por simplicidad, en este tutorial solo trabajaremos con la prueba de hipótesis de igualdad de medias, tambien conocida como prueba de dos colas. En pruebas de una cola, la completitud refiere a que si se tiene por hipótesis nula que la media de A es menor o igual a la media de B, entonces la hipótesis alternativa debe ser que la media de B es mayor a la media de A.
+
+### Una explicación adicional de la prueba ANOVA
+
+Ya dijimos que la prueba de diferencia de medias, tambien conocida como *t-test*, solo permite la comparación entre dos grupos y que la ANOVA permite la comparación entre 2 o más grupos. Pero, **¿Por qué si se comparan las medias se llama Análisis de Varianza?**\
+Porque lo que hace la prueba ANOVA es comparar la varianza *entre* grupos con la varianza al *interior* de los grupos, si la varianza entre grupos es mayor a la varianza al interior de los grupos, se genera evidencia significativa de que las medias de los grupos son diferentes.
+
+Una muestra gráfica de esto se presenta a continuación, en el gráfico de la izquierda la evidencia en contra de la hipótesis nula de que las medias son iguales, es significativamente mayor a la del gráfico de la derecha.
+
+```{r message=FALSE, warning=FALSE, echo=FALSE}
+
+set.seed(12)
+anovaA <- rnorm(n = 10, mean = 1, sd = 1)
+anovaB <- rnorm(n = 10, mean = 5, sd = 1)
+anovaC <- rnorm(n = 10, mean = 9, sd = 1)
+
+set.seed(13)
+anovaNoA <- rnorm(n = 10, mean = 3, sd = 4)
+anovaNoB <- rnorm(n = 10, mean = 2.5, sd = 4)
+anovaNoC <- rnorm(n = 10, mean = 3.5, sd = 4)
+
+tablaAnova <- tibble(prueba = c(rep("Diferencia Evidente", 30), rep("Diferencia No Evidente", 30)),
+                     ref = rep(c(rep("Sample 1",10),rep("Sample 2",10),rep("Sample 3",10)),2),
+                     valores = c(anovaA, anovaB, anovaC, anovaNoA, anovaNoB, anovaNoC))
+
+tablaAnova %>% 
+  ggplot() +
+  geom_point(mapping = aes(x = ref, 
+                           y = valores, 
+                           shape = ref, 
+                           color = ref),
+             size = 3,
+             show.legend = F) +
+  facet_grid(~prueba) +
+  labs(title = "Ejemplo de varianzas entre grupos y al interior de los grupos\n",
+       subtitle = "En el gráfico de la izquierda es evidente que la diferencia entre grupos es mayor a la diferencia\nal interior de los grupos. Por el contrario, en el gráfico de la derecha se observa que la diferencia\nentre grupos es menor a la diferencia al interior de los grupos\n",
+       x = NULL,
+       y = "Valores")
+  
+
+
+```
+
+### Formulas de los estadisticos ***t*** y ***F***
+
+Si bien lo mas relevante en terminos conceptuales es entender **de que se trata** cada prueba y eso no siempre se consigue con las formulas matemáticas, es importante conocer las formulas de los estadisticos *t* y *F* para la realización de estas pruebas de hipótesis.
+
+#### Estadístico t-Student
+
+$$t = \frac{(\mu_A - \mu_B) - 0}{\sqrt{\frac{S^2_A}{n_A} + \frac{S^2_B}{n_B}}}$$
+
+::: {.callout-note appearance="simple"}
+El estadístico *t-Student* es igual a la diferencia de las medias dividido entre el error estandar
+:::
+
+#### Estadistico F
+
+$$F = \frac{\frac{\sum_{i=1}^{k}n_i(\bar{X}_i-\bar{X})^2}{k-1}}{\frac{\sum_{i=1}^{k}\sum_{j=1}^{n_i}(X_{ij} - \bar{X}_i)^2}{N-k}}$$
+
+Siendo $k$ el número de grupos, $N$ el número total de observaciones y $n_i$ el número de observaciónes en el grupo $i$.
+
+::: {.callout-note appearance="simple"}
+El estadístico *F* es igual a la varianza estimada entre grupos, dividido por la varianza estimada al interior de los grupos
+:::
+
+### Proceso de elaboración de la prueba de hipótesis
+
+Si bien desde un punto de vista puramente práctico la prueba de hipótesis de diferencia de medias y la prueba anova pueden llevarse a cabo en una sola linea de codigo, hay un conjunto de criterios a establecer e informar que se presentan en los siguientes cuatro pasos.
+
+1. **Establecimiento de la hipótesis:** Lo primero que debemos hacer es plantear nuestra hipótesis en terminos de *hipótesis nula* ($H_0$) e *hipótesis alternativa* ($H_1$), estas hipótesis deben ser complementarias y completas respecto a los resultados posibles.
+2. **Establecimiento del nivel de significancia:** Esto tambien se conoce como determinación de la probabilidad del error tipo I. Los valores más utilizados de $\alpha$ son $0.05$ ($95\%$ de confianza), $0.01$ ($99\%$ de confianza) y $0.1$ ($90\%$ de confianza).
+3. **Construcción del test estadistico:** Esto lo hace de manera automática la función del software, sin embargo, no esta de más hacer explicito el calculo subyacente bien sea una diferencia de medias o  una prueba anova.
+4. **Determinación de aceptación o rechazo:** Hay tres criterios para determinar si se acepta o se rechaza la hipótesis nula.
+    - **Comparación del test estadistico con el valor crítico:** el valor obtenido en 3 se compara con un valor crítico de la distribución t-Student o la distribución F según corresponda.
+    - **P-Valor:** obtenido el p-valor del test, se acepta o se rechaza la hipótesis nula dependiendo de si es mayor o menor al nivel de significancia $\alpha$.
+    - **Intervalos de confianza:** En el caso particular de las medias es posible utilizar los intervalos de confianza de dos maneras. La primera es calcular el intervalo de confianza de la diferencia de medias, si dentro de estos intervalos de confianza esta contenido el cero, entonces se acepta la hipotesis nula. La segunda es calculando los intervalos de confianza para cada una de las medias de manera independiente, si existe un solapamiento entre los intervalos de confianza de los grupos analizados, entonces se acepta la hipótesis nula.
+    
+::: {.callout-note appearance="simple"}
+Cualquiera de los tres criterios utilizados debe conducir a la misma conclusión respecto a la aceptación o rechazo de la hipótesis nula.
+:::
+
+Es importante resaltar que los resultados a los que llegamos una vez realizados los 4 pasos anteriores, nos informan sobre parametros poblacionales siempre que la muestra halla sido seleccionada de manera aleatoria. Es el principal aporte de la inferencia estadistica, conocer la tendencia o prevalencia de ciertos aspectos poblacionales a partir del estudio de un subconjunto de la población definida como muestra.
+
+## Procesamiento de los datos
+
+A partir de los alcances de cada uno de los métodos, vamos a evaluar dos cosas. La primera, verificar si tomar al menos un taller, genera una diferencia significativa en el promedio de tolerancia política (comparar dos grupos con *t.test*). La segunda, verificar si existen diferencias significativas en el promedio de tolerancia política entre no tomar talleres, tomar 1, 2, 3 y 4 o más (comparar cinco grupos con *anova*).
+El procesamiento de los datos para realizar dichas pruebas de hipótesis, se presenta a continuación.
+
+### Cargar la base
+
+Para cargar la base de datos con nombre *"EF.dta"*, debemos hacer uso de los paquetes *'foreign'* o *'haven'*, los cuales permiten cargar archivos *.dta*. Además, debemos asegurarnos de que la base de datos se encuentre guardada en nuestro directorio de trabajo, el cual podemos consultar con la función <span style="color:darkred;">'getwd()'</span>
+
+```{r}
+
+rm(list = ls()) # Limpiamos el ambiente (borramos todos los objetos pre-existentes)
+
+# getwd() para verificar cual es nuestro directorio de trabajo y asegurarnos que la base se encuentre ahí
+# setwd() en caso de querer cambiar nuestro directorio de trabajo
+
+library(haven) # Paquete para poder cargar archivos .dta
+
+```
+
+Cargare la base de datos con el nombre *'base'*
+
+```{r}
+
+base <- read_dta("EF.dta")
+
+```
+
+### Exploración de la base
+
+Antes de iniciar los análisis, siempre es conveniente hacer una exploración general de los datos, para verificar que se cargaron correctamente y que no hay ningún error en los mismos. Los comandos que yo suelo usar para ello son <span style="color:darkred;">'glimpse()'</span> del paquete *dplyr* y <span style="color:darkred;">'summary()'</span> que ya viene cargado por defecto en el R.
+
+```{r}
+
+library(dplyr) # Activamos el paquete dplyr
+
+base %>% glimpse() # Nos muestra los primeros valores y el tipo de cada variable
+
+summary(base) # Hace un resumen estadistico de cada variable
+
+# Otras funciones que sirven para hacer esta primera exploración son
+
+# View() la cual despliega la base como una hoja de excel en una pestaña nueva
+# head() muestra las primeros 10 observaciones de cada variable
+# tail() muestra las ultimas 10 observaciones de cada variable
+```
+
+### Identificación de las variables de interes
+
+La base cuenta con 10 variables y 4,602 observaciones, como mencionamos en la contextualización del estudio, esta investigación es un trabajo longitudinal en el que se realizaron encuestas a las mismas personas antes y despues de los talleres de educación cívica. Este tipo de datos conocidos como panel de datos, son muy utilizados en la aplicación de metodologías de inferencía causal, para los fines de nuestro análisis, tomaremos solamente las encuestas despues de la aplicación de los talleres, las cuales se identifican con el valor de 1 en la variable **waveint**.\
+Para ello creamos una nueva base con nombre **basePost** la cual contiene las mismas 10 variables de la base original, pero filtrada por la condición lógica ***waveint == 1***.[^4]
+
+[^4]: Siempre que deseemos filtrar una base de datos, **tiene que existir una condición lógica** que evalue a cada observación y determine si cumple o no la prueba.
+
+```{r}
+
+# Filtrado de la base según el valor de waveint
+
+basePost <- base[base$waveint == 1, ] # Alternativa en R base
+
+basePost <- base %>%                  # Alternativa con Tidyverse
+  filter(waveint == 1)
+
+```
+
+La variable que define la cantidad de talleres que tomo cada individuo es ***multce_w*** y la variable de tolerancia política esta etiquetada como ***tol_w***.
+
+En el caso de ***tol_w*** se trata de una variable continua entre 1 y 4, la cual fue construida a partir de la respuesta a 4 preguntas, siendo 1 poco tolerante y 4 muy tolerante.[^5]\
+A continuación se muestra la distribución de la variable ***tol_w*** a partir de su histograma y su función de densidad, la variable muestra un sesgo a la derecha, dando cuenta de que aún despues de los talleres cívicos, en general hay una mayor prevalencia de baja tolerancia política.
+
+[^5]: '[...] Medimos la tolerancia política con cuatro preguntas estándar sobre si a los ateos y a las personas que quieren abolir las elecciones en favor de un gobierno militar se les debería permitir *“hablar públicamente en su localidad”* y *“organizar una manifestación pacífica para expresar su punto de vista”* [...]' Finkel y Smith 2011, pagina 7.
+
+```{r}
+
+# Opcion grafica de R base
+
+hist(basePost$tol_w) 
+
+# Opción grafica con el paquete ggplot2 
+
+library(ggplot2)
+
+basePost %>% 
+  ggplot() +
+  geom_histogram(mapping = aes(x = tol_w, y = after_stat(density)),
+                 bins = 15, 
+                 color = "white") +
+  geom_density(mapping = aes(x = tol_w),
+               color = "darkblue",
+               fill = "blue",
+               alpha = 0.3) +
+  labs(title = "Distribución de la variable Tolerancia Política",
+       y = "Densidad",
+       x = "Tolerancia Política")
+
+
+# Ante la advertencia de 2 observaciones con NA, eliminamos las observaciones
+# con NA en la variable dependiente.
+
+basePost <- basePost[!is.na(basePost$tol_w), ]
+
+```
+
+La variable ***multce_w***, si bien esta almacenada en nuestra base de datos como una variable continua, es una variable categórica ordinal, cuyos valores posibles se corresponden con el número de talleres tomados entre 0 y 4. Con ello en mente, es necesario transformar esta variable de continua a categorica con la función <span style="color:darkred;">**'factor()'**</span>.
+
+En el siguiente chunk de código transformamos la variable ***multce_w*** en categorica ordinal y vemos graficamente como se distribuye la misma.
+
+```{r}
+
+# Alternativa en R base
+
+basePost$multce_w <- factor(basePost$multce_w, 
+                            levels = c(0,1,2,3,4), 
+                            labels = c("0","1","2","3","4 o más"))
+
+
+# Alternativa con dplyr
+
+# basePost <- basePost %>%
+#   mutate(multce_w = factor(multce_w,
+#                            levels = c(0,1,2,3,4),
+#                            labels = c("0","1","2","3","4 o más")))
+
+
+## Gráfico con ggplot2
+
+# Generamos una base de datos que almacene el número 
+# de observaciones en cada grupo
+
+etiquetas <- basePost %>% 
+  group_by(multce_w) %>%  
+  tally()
+
+# Almacenamos una escala de color utilizando el paquete RColorBrewer 
+
+coloresBarras <- RColorBrewer::brewer.pal(5,       # Número de colores
+                                          "Blues") # las paletas disponibles pueden consultarse en https://r-graph-gallery.com/38-rcolorbrewers-palettes.html
+
+# Código del gráfico
+
+basePost %>% 
+  ggplot() +
+  geom_bar(mapping = aes(x = multce_w),
+           fill = coloresBarras,
+           color = "darkblue") +
+  geom_text(data = etiquetas, 
+            mapping = aes(x = multce_w, 
+                          y = n + 30, 
+                          label = n)) +
+  labs(title = "Distribución de asistentes a cantidad de talleres",
+       y = "Asistentes",
+       x = "Número de talleres") +
+  theme_bw()
+
+```
+
+Algo relevante de la anterior gráfica al momento de pensar en el test de diferencia de medias, es que el tamaño de la muestra incide en el error estandar, la relación entre tamaño de muestra y error estandar es inversa, de manera que, al construir los intervalos de confianza de la media de tolerancia política para cada grupo, se esperaría que, manteniendo constante todo lo demas, la amplitud del intervalo de confianza para las categorías **2**, **3** y **4 o más**, sea significativamente mayor a la amplitud del intervalo de las categorías **0** y **1**. 
+
+Habiendo hecho un análisis exploratorio de las variables de interes, vamos a proceder a la corroboración de la hipótesis de diferencia de medias.
+
+### Corroboración de hipótesis *t.test*
+
+Una de las limitaciones que enfrentamos al momento de realizar la prueba de hipótesis de diferencia de medias, es que esta diseñada para hacer comparaciones entre dos grupos y nuestra variable categórica ***multce_w*** tiene cinco, lo ideal en ese caso seria utilizar una prueba ANOVA, pero para entender bien la ANOVA primero hay que entender bien la diferencia de medias. En función de ello, vamos a reagrupar nuestra variable categórica en tratados y no tratados con la siguiente condición lógica.
+
+::: {.callout-note appearance="simple"}
+Si ***multce_w*** es igual a cero $(multce\_w == 0)$, entonces es No Tratado.\
+Si ***multce_w*** es mayor o igual a uno $(multce\_w >= 1)$, entonces es Tratado
+:::
+
+#### Reagrupación de variable
+
+En este chunck vemos el código para generar la variable agrupada nombrada *tratamiento* y una gráfica de barras que muestra la distribución de la misma
+
+```{r}
+
+# Código de agrupación de variable
+
+basePost$tratamiento <- factor(
+  case_when(
+  basePost$multce_w == "0" ~ "No Tratado",
+  basePost$multce_w != "0" ~ "Tratado"),
+  levels = c("No Tratado",
+             "Tratado"),
+  labels = c("No Tratado",
+             "Tratado")) 
+
+## Gráfico con ggplot2
+
+# Almacenamos las etiquetas del número de observaciones en una base de datos
+
+etiquetas2 <- basePost %>% 
+  group_by(tratamiento) %>% 
+  tally()
+
+# Código del gráfico
+
+basePost %>% 
+  ggplot() +
+  geom_bar(mapping = aes(x = tratamiento, fill = tratamiento),
+           show.legend = F) +
+  geom_text(data = etiquetas2,
+            mapping = aes(x = tratamiento, 
+                          y = n + 50,
+                          label = n)) +
+  scale_fill_manual(values = c("darkblue", "darkgreen")) +
+  labs(x = "Tratamiento",
+       y = "Número de casos")
+
+
+```
+
+Habiendo creado la variable tratamiento, la cual contiene solo 2 categorias, ya podemos hacer uso de la función <span style="color:darkred;">**'t.test()'**</span>
+
+Los argumentos de la función <span style="color:darkred;">**'t.test()'**</span> para la diferencia de medias son: 
+
+- **formula** la cual contiene una variable cuantitativa y una variable categorica con solamente dos niveles o valores posibles (indispensable).
+- **data** la base de datos donde estan las variables analizadas (indispensable).
+- **alternative** en este argumento especificamos el tipo de hipótesis a realizar, los valores posibles son *"two.side"* (igualdad de medias), *"less"* (media grupo 1 menor que media gurpo 2) y *"greater"* (media grupo 1 mayor que grupo 2).
+
+El argumento alternative no es indispensable especificarlo, la función tiene el valor *"two.side"* por defecto, que en este caso especifico, simbolizando con $(t)$ a los tratados y con $(nt)$ a los no tratados, la hipótesis nula ($H_0$) y alternativa ($H_1$) serian:
+
+- $H_0$ : $\mu_{nt} - \mu_{t} = 0$
+- $H_1$ : $\mu_{nt} - \mu_{t} \neq 0$
+
+Donde $\mu$ simboliza la media poblacional de la variable cuantitativa tolerancia política.
+
+Los productos de la función <span style="color:darkred;">**'t.test()'**</span> son el p-Valor de la prueba, el valor del test estadístico y el intervalo de confianza de la diferencia de medias. Por lo que una vez utilizada, es posible determinar la significatividad de la diferencia de medias por cualquiera de los tres criterios.
+
+```{r}
+
+t.test(formula = tol_w ~ tratamiento,   # formula, siempre se especifica "var. cuantitativa ~ var. categorica"
+       data = basePost,                 # data, base de datos que contiene las variables
+       alternative = "two.side")        # alternative, es una buena practica hacer explicita la hipótesis
+
+```
+
+```{r echo=FALSE, warning=FALSE, message=FALSE}
+
+prueba <- t.test(formula = tol_w ~ tratamiento,   # formula, siempre se especifica "var. cuantitativa ~ var. categorica"
+       data = basePost,                 # data, base de datos que contiene las variables
+       alternative = "two.side")        # alternative, es una buena practica hacer explicita la hipótesis
+
+```
+
+
+##### Aplicación de criterios
+
+Como ya se mencionó, los criterios deben conducir a la misma conclusión respecto a la aceptación o rechazo de la hipótesis nula, empecemos por el más intuitivo, el ***P-Valor***.\
+
+Este se encuentra en la parte superior derecha y tiene un valor de $9.993 \cdot 10^{-6}$, en notación decimal su valor es de $0.000009934$. Esa es la probabilidad de que la media de los no tratados menos la media de los tratados sea igual a `r round(prueba$estimate[1] - prueba$estimate[2], 2)` (estimador puntual de la diferencia de medias), dado que la hipótesis nula es verdadera.\
+Como esa probabilidad es menor al nivel de significancia $(0.05)$ entonces rechazamos la hipótesis nula y podemos afirmar que:
+
+::: {.callout-note appearance="simple"}
+Existe una diferencia significativa en el nivel de tolerancia política entre quienes nunca asistieron a un taller de educación cívica y quienes asistieron al menos a un taller.
+:::
+
+Para hacer uso de la ***comparación del test estadístico con el valor crítico***, tomamos el valor estadístico de la prueba que se encuentra en la parte superior izquierda $(t =$ *`r prueba$statistic`)* y lo comparamos con los límites de aceptación o rechazo de la hipótesis nula según la distribución teórica t-Student para ciertos grados de libertad.\
+La distribución t-Student tiende a una distribución normal en la medida en que crecen los grados de libertad, por lo que con muestras lo suficientemente grandes, es relativamente valido tomar como valores críticos los valores de la distribución normal $\lvert 1.96 \rvert$ para un nivel de confianza del $95\%$.
+Sin embargo, una de las ventajas de utilizar un software estadístico esta en tener mayor precisión. Teniendo en cuenta la formula de grados de libertad para la prueba de diferencia de medias con varianzas desconocidas y diferentes [@libroEstadistica2016].[^6]
+
+$$ v = \frac{\left( \frac{s_{x}^{2}}{n_{x}} + \frac{s_{y}^{2}}{n_{y}} \right)}{\frac{(s_{x}^{2}/n_{x})}{n_{x} - 1} + \frac{(s_{y}^{2}/n_{y})}{n_{y} - 1}} $$
+
+[^6]: Esta formula es para la prueba de hipótesis de diferencia de medias con varianzas desconocidas y diferentes, escenario en el cual se aplica el *test de Welch*.
+
+En el siguiente chunk de código se muestra la obtención de los grados de libertad $(v)$ y del valor crítico de la distribución t-Student para una prueba de igualdad de medias con un nivel de confianza del $95\%$
+
+```{r}
+
+# Definimos y guardamos en un objeto los tamaños de muestra
+
+n_x <- nrow(basePost[basePost$tratamiento == "No Tratado", ])
+n_y <- nrow(basePost[basePost$tratamiento == "Tratado", ])
+
+# Definimos y guardamos en un objeto las varianzas muestrales
+
+s2_x <- var(basePost$tol_w[basePost$tratamiento == "No Tratado"], na.rm = T)
+s2_y <- var(basePost$tol_w[basePost$tratamiento == "Tratado"], na.rm = T)
+
+# Aplicamos la formula para establecer grados de libertad en diferencia de 
+# medias con varianzas desconocidad y distintas
+
+v <- (s2_x/n_x + s2_y/n_y)^2/((s2_x/n_x)^2/(n_x - 1) + (s2_y/n_y)^2/(n_y - 1))
+
+# Con la función qt, obtenemos el valor teórico de la distribución t-Student
+# para cierto nivel de confianza (argumento p) y ciertos grados de libertad 
+# (argumento df)
+
+qt(p = 0.025, df = v)
+
+```
+
+Debido a que `r prueba$statistic` es menor a `r qt(p = 0.025, df = v)`, la prueba cae en una zona de rechazo de la hipótesis nula, pudiendo afirmar que las medias de tratados y no tratados, son significativamente diferentes.
+
+Finalmente, la funcion <span style="color:darkred;">**'t.test()'**</span> nos devuelve los intervalos de confianza de la diferencia de medias, del planteamiento formal de la hipótesis nula:
+
+$$H_0: \mu_{nt} - \mu_{t} = 0$$
+
+Es facil deducir que si los intervalos de confianza no contienen el cero (ambos intervalos son negativos o ambos intervalos son positivos), entonces se rechaza la hipótesis nula de igualdad de medias. En este caso puntual los intervalos son, ***Limite Inferior `r prueba$conf.int[1]`*** y ***Limite Superior `r prueba$conf.int[2]`***. Dando cuenta de que no solo las medias son diferentes, sino que además, la media de los no tratados $(\mu_{nt})$ es menor a la media de los tratados $(\mu_{t})$, apoyando la hipótesis planteada por [@finkel2011] sobre el efecto positivo de los talleres de educación cívica en la tolerancia política.
+
+Para terminar con la prueba de igualdad de medias, en el siguiente bloque de código se presenta el calculo y se gráfican los intervalos de confianza del valor medio de tolerancia política en tratados y no tratados, como puede observarse no hay solapamiento en los intervalos de confianza, por lo que podemos afirmar que las medias son diferentes y que la media de los no tratados es menor a la media de los tratados.
+
+```{r echo=FALSE, warning=FALSE, message=FALSE}
+library(latex2exp)
+```
+
+
+```{r}
+
+# Calculo de los intervalos de confianza de tol_w para tratados y no tratados
+
+IntervalosTol_w <- basePost %>% 
+  group_by(tratamiento) %>%                       
+  summarise(meanTol = mean(tol_w, na.rm = T),
+            sdTol = sd(tol_w, na.rm = T),
+            n = n(),
+            quantile = qt(.975, df = n-1,),
+            margenError = sdTol/sqrt(n)*quantile,
+            Li = meanTol - margenError,
+            Ls = meanTol + margenError) 
+
+## Código del gráfico de los intervalos con ggplot2
+
+IntervalosTol_w %>% 
+  ggplot() +
+  geom_errorbar(mapping = aes(x = tratamiento, 
+                              y = meanTol, 
+                              ymin = Li, 
+                              ymax = Ls),
+                width = 0.6) +
+  geom_point(mapping = aes(x = tratamiento, 
+                           y = meanTol)) +
+  labs(title = "Intervalos de confianza de la media de Tolerancia Política",
+       x = "Grupo",
+       y = "Tolerancia Política") +
+  theme_bw() +
+  theme(plot.title = element_text(hjust = 0.5))
+
+
+## Intervalos de confianza de la diferencia de medias
+
+IntervalosDif_Medias <- tibble(estimacionPuntual = prueba$estimate[1] - prueba$estimate[2],
+                               limiteInferior = prueba$conf.int[1],
+                               limiteSuperior = prueba$conf.int[2])
+
+# Opción vertical
+
+IntervalosDif_Medias %>% 
+  ggplot() +
+  geom_errorbar(mapping = aes(x = "Dif. Medias",
+                              y = estimacionPuntual, 
+                              ymin = limiteInferior, 
+                              ymax = limiteSuperior),
+                width = 0.6) +
+  geom_point(mapping = aes(x = "Dif. Medias",
+                           y = estimacionPuntual)) +
+  geom_hline(mapping = aes(yintercept = 0), 
+             color = "darkred",
+             linetype = "dashed",
+             linewidth = 1) +
+   labs(title = "Intervalos de confianza de la diferencia de medias de Tolerancia Política\nentre Tratados y No Tratados",
+       x = NULL,
+       y = TeX('$\\bar{X}_{nt} - \\bar{X}_{t}$')) +
+  theme_bw() +
+  theme(plot.title = element_text(hjust = 0.5)) 
+
+# Opción Horizontal
+
+IntervalosDif_Medias %>% 
+  ggplot() +
+  geom_errorbar(mapping = aes(x = "Dif. Medias",
+                              y = estimacionPuntual, 
+                              ymin = limiteInferior, 
+                              ymax = limiteSuperior),
+                width = 0.6) +
+  geom_point(mapping = aes(x = "Dif. Medias",
+                           y = estimacionPuntual)) +
+  geom_hline(mapping = aes(yintercept = 0), 
+             color = "darkred",
+             linetype = "dashed",
+             linewidth = 1) +
+   labs(title = "Intervalos de confianza de la diferencia de medias de Tolerancia Política\nentre Tratados y No Tratados",
+       x = NULL,
+       y = TeX('$\\bar{X}_{nt} - \\bar{X}_{t}$')) +
+  theme_bw() +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  coord_flip()
+
+
+
+
+```
+
+### Prueba ***ANOVA***
+
+Aunque la prueba de diferencia de medias *(t-test)* es concluyente respecto al efecto positivo de los talleres de educación cívica en la tolerancia política, al agrupar los individuos que asistieron a al menos un taller en una sola categoría, perdemos información.\
+Es decir, la respuesta en la tolerancia política no necesariamente es la misma si se asiste a un taller, a dos talleres o a cuatro talleres, la mejor manera de tener en cuenta esa variabilidad en el tratamiento es a través del análisis de varianza o prueba ANOVA de un factor.[^7]
+
+[^7]: Por un factor nos referimos a que solamente se está teniendo en cuenta una variable de agrupación, en este caso el número de talleres de educación cívica recibidos. Si agregáramos el sexo como variable categórica para el análisis, estaríamos hablando de prueba ANOVA de dos factores.
+
+En el software *R* la manera más sencilla de realizar este análisis es a través de una regresión lineal, tomando como variable dependiente a nuestra variable númerica ***tol_w*** y como variable independiente a nuestra variable categórica ***multce_w***.\
+Existe cierta complejidad en la utilización de variables categóricas en los análisis de regresión, cuando la variable independiente es continua, obtenemos solo un coeficiente de regresión $(\beta_1)$ que nos indica el cambio en la variable dependiente ante el cambio en una unidad de la variable independiente. En el caso de variables categóricas como ***multce_w***, obtenemos $k-1$ coeficientes de regresión, siendo $k$ el número de categorías posibles.\
+En nuestro ejemplo concreto ***multce_w*** tiene 5 categorías posibles, por lo que al realizar la regresión con esta variable categórica obtenemos 4 coeficientes de regresión $(\beta_i)$.\
+
+**¿Porque perdemos una categoría en el análisis?** En realidad no perdemos ninguna categoría, los coeficientes obtenidos $(\beta_i)$ reflejan el cambio en la variable dependiente ante un cambio en la variable independiente. Cuando nuestra variable independiente es categórica, se toma una de las categorías como referencia para calcular ese cambio, dicha categoría de referencia se refleja en el intercepto.
+
+En este caso concreto, al realizar la regresión de ***tol_w*** en función de ***multce_w***, se toma como categoría de referencia $multce\_w = 0$ (no haber tomado ningún taller de educación cívica), por lo que el intercepto refleja el promedio de la tolerancia política en el grupo que no tomo ningún taller. Los cuatro coeficientes de regresión restantes lo que muestran es la diferencia en el valor medio de la tolerancia política de sus categorías con respecto a la categoría de referencia. Formalmente:
+
+\begin{itemize}
+  \item $\hat{\beta}_0 = \bar{X}_0$
+  \item $\hat{\beta}_1 = \bar{X}_1 - \bar{X}_0$
+  \item $\hat{\beta}_2 = \bar{X}_2 - \bar{X}_0$
+  \item $\hat{\beta}_3 = \bar{X}_3 - \bar{X}_0$
+  \item $\hat{\beta}_{4 \hspace{0.07cm} o \hspace{0.07cm} más} = \bar{X}_{4 \hspace{0.07cm} o \hspace{0.07cm} más} - \bar{X}_0$
+\end{itemize}
+
+Ahora bien, en algunas ocasiones lo que más nos interesa de los análisis de regresión no es el valor de los $\hat{\beta}$, sino su significatividad, la cual se puede determinar por el P-Valor. En este caso específico, que el coeficiente de regresión $\hat{\beta}_i$ sea significativo, implica que la media de la tolerancia política de la categoría $i$ tiene una diferencia significativa con respecto a la media de la tolerancia política de la categoría de referencia.
+
+Ahora veamos el código para realizar este análisis:
+
+```{r}
+
+# Calculamos la regresión de tolerancia política en función del número de talleres
+# almacenandolo en el objeto 'reg'
+
+reg <- lm(tol_w ~ multce_w, data = basePost)
+
+summary(reg) # Comando para obtener el resumen de la regresión
+
+```
+
+En este tipo de análisis el intercepto va a ser siempre significativo, el valor del intercepto (`r reg$coefficients[1]`) corresponde a la media de la tolerancia política en individuos que nunca asistieron a algún taller de educación cívica. Respecto al resto de coeficientes, $\hat{\beta}_1$ no es significativo, esto quiere decir que no existen diferencias significativas en el valor medio de tolerancia política entre aquellos que nunca recibieron talleres civícos y los que recibieron solo 1. Que los otros coeficientes $[\hat{\beta}_2,\hat{\beta}_3,\hat{\beta}_{4 \hspace{0.07cm} o \hspace{0.07cm} más}]$ sean significativos, implica que si existe una diferencia significativa entre el valor medio de tolerancia política de quienes recibieron 2, 3 y 4 o más talleres con respecto al valor medio de tolerancia política de quienes no recibieron ningún taller. Además, siguiendo las fórmulas presentadas para cada uno de los $\beta_i$, el hecho de que el valor de estos últimos sea positivo, implica que la tolerancia política en los grupos 2, 3 y 4 o más, es mayor a la tolerancia política del grupo de referencia (0 talleres), abonando a la hipótesis de los autores respecto al efecto positivo de la educación cívica sobre la tolerancia política.
+
+Con este análisis ya tenemos información adicional respecto al comportamiento de la tolerancia política en función del número de talleres cívicos, sin embargo, nuestras conclusiones son con respecto a la categoría de referencia. Es decir, no podemos afirmar nada respecto a las diferencias en los valores medios de tolerancia política de quienes asistieron a 2 talleres con respecto a quienes asistieron a 4 o más.\
+Una alternativa para ello es hacer una prueba de diferencia de medias para estas dos categorías[^8], pero si quisiéramos comparar todas las categorías de manera simultánea, lo mejor es obtener los intervalos de confianza de las medias por categoría y verificar si existe o no solapamiento entre las mismas.
+
+A continuación se presenta el código para calcular y graficar las medias y los intervalos de confianza de la tolerancia política según el número de talleres tomados.
+
+[^8]: Este sería un buen ejercicio práctico, para reutilizar el código del t.test solo tendríamos que filtrar basePost, dejando solamente las categorías *multce_w = 2* y *multce_w = 4 o más* y en la formula especificar *tol_w ~ multce_w*.
+
+```{r width = 8, height = 5}
+
+
+Intervalos_grupos <- basePost %>% 
+  group_by(multce_w) %>% 
+  summarise(meanTol = mean(tol_w, na.rm = T),
+            sdTol = sd(tol_w, na.rm = T),
+            n = n(),
+            quantile = qt(.975, df = n-1,),
+            Li = meanTol - sdTol/sqrt(n)*quantile,
+            Ls = meanTol + sdTol/sqrt(n)*quantile)
+
+
+Intervalos_grupos %>% 
+  ggplot() +
+  geom_point(mapping = aes(x = multce_w, 
+                           y = meanTol,
+                           shape = multce_w),
+             show.legend = F) +
+  geom_errorbar(mapping = aes(x = multce_w, 
+                              y = meanTol, 
+                              ymin = Li, 
+                              ymax = Ls),
+                width = 0.5,
+                show.legend = F) +
+  labs(title = "Intervalos de confianza al 95% de la media de tolerancia política según el número\nde talleres cívicos tomados\n",
+       subtitle = "Según estos valores se requieren al menos 2 talleres para que estos tengan un efecto significativo sobre la\ntolerancia política. Además, tomar más de 2 no genera ningún cambio significativo con respecto a aquellos\nque tomaron solamente 2.",
+       x = "Número de talleres cívicos",
+       y = "Media de tolerancia política") +
+  theme(plot.subtitle = element_text(size = 9),
+        plot.title = element_text(hjust = 0.5))
+  
+
+
+```
+
+A partir del gráfico anterior podemos concluir que se requieren al menos dos talleres para que estos tengan un efecto positivo sobre la tolerancia política y que tomar más de dos no genera cambios significativos con respecto a aquellos que tomaron solamente 2.\
+Estas conclusiones coinciden con el análisis de regresión realizado anteriormente, en el cual veíamos que tomar un taller no generaba cambios significativos en la tolerancia política con respecto a no tomar ninguno, mientras que tomar 2, 3 y 4 o más si lo hacian.\
+Algo que vale la pena destacar del gráfico es la relación inversa entre la amplitud de los intervalos de confianza y el tamaño de la muestra, las categorías cero y uno cuentan con un tamaño de muestra significativamente mayor al del resto de categorías, dando lugar a una menor amplitud de los intervalos de confianza y por lo tanto mayor precisión en la estimación del parametro poblacional.
+
+Aunque este análisis muestra que los talleres cívicos tienen un efecto positivo sobre la tolerancia política, no podemos hacer afirmaciones en terminos de inferencia causal, es decir, no podemos afirmar que la tolerancia política se incremento por los talleres cívicos.\
+En primer lugar nuestros resultados pueden estar sesgados por omitir variables relevantes, el sexo, el nivel educativo, la etnia de pertenencia o la edad, son variables que pueden incidir en la probabilidad de tomar talleres cívicos y en el grado de tolerancia política que se tenga.\
+Otro problema a atender es el sesgo de autoselección, es posible que un individuo con un nivel alto de tolerancia política sea más propenso a tomar talleres de educación cívica. Por suerte existen metodologías para lidiar con estos problemas y establecer la causalidad entre talleres cívicos y tolerancia política.
+
+Muchas gracias por haber llegado hasta aquí.
