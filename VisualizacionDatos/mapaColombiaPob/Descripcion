@@ -1,0 +1,3 @@
+En este repositorio está el código para replicar el mapa de Colombia a partir de un archivo Raster.
+La fuente de los dato es la Global Human Settlement de la Comisión Europea, en el Código se encuentran los comandos para realizar
+la decarga de los datos.
