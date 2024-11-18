@@ -1,0 +1,6 @@
+En esta carpeta esta todo el código necesario para poder realizar la visualización del mapa con la brecha de ingresos
+por genero y por maximo nivel educativo alcanzado.
+La base de datos para poder realizar en grafico es la ENOE del II trimestre de 2024 y un archivo .shp para poder mapear los
+datos por entidad federativa.
+La Enoe se puede descargar del siguiente link: "https://www.inegi.org.mx/programas/enoe/15ymas/#microdatos"
+la descarga del archivo .shp esta incluida en el script.
