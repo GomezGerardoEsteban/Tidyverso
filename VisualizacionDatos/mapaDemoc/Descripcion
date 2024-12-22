@@ -1,0 +1,3 @@
+En esta carpeta se encuentra todo el material necesario para replicar la visualización del mapa y el gráfico de dispersión entre
+PIB per cápita y democracia, la base de datos ShapefileDemoc_GDP esta en formato .RData, y esta construida a partir de información
+de V-Dem y el Banco Mundial para el año 2019.
