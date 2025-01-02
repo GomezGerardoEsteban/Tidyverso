@@ -1,0 +1,4 @@
+En esta carpeta esta el Script para realizar calendarios en R con la libreria {calendR},
+la libreria es muy intuitiva, no exige conocimientos avanzados en manejo de fechas y las opciones predeterminadas se ajustan
+bastante bien.
+La replicación del calendario requiere tener la imagen bg_img.png en tu directorio de trabajo.
