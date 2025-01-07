@@ -1,0 +1,90 @@
+---
+title: "Proceso de descarga e instalción de R y RStudio"
+author: "Gerardo Esteban, Gómez-Santiago"
+date: "october 11, 2024"
+toc: true
+csl: apa.csl
+bibliography: export.bib
+format: 
+  html:
+    theme: default
+    html-math-method: katex
+    code-tools: true
+    self-contained: true
+execute:
+  warning: false
+---
+
+Para poder realizar el [Taller Introductorio al Análisis Estadístico en R](https://sites.google.com/view/taller-r-gomezesteban/inicio) es necesario tener instalado dos programas.
+
+- Software R
+- Software RStudio
+
+Para la descarga de los mismos debes acceder al siguiente link [https://posit.co/download/rstudio-desktop/](https://posit.co/download/rstudio-desktop/), donde encontraras los siguientes botones de descarga.
+
+![](C:/Users/GERARDO/Pictures/Screenshots/randrstudio.png)
+
+## R
+
+### Descarga
+
+Empezando por R, una vez apretas el botón de descarga te redirige a la siguiente pagina, en la cual debes seleccionar la opción de descarga que te corresponda según tu sistema operativo.
+
+![](C:/Users/GERARDO/Pictures/Screenshots/capturaRt.png)
+
+En caso de que tu sistema operativo sea Windows, te encontraras con la siguiente pagina, en la cual debes elegir la opción **base** que esta señalada por el recuadro rojo.
+Si tu sistema operativo es macOS no puedo ayudarte con el paso a paso, pero la verdad es muy intuitivo y te recomiendo este video donde muestran como hacerlo [video](https://www.youtube.com/watch?v=OW66f1sBQOc)
+
+
+![](C:/Users/GERARDO/Pictures/Screenshots/capturaRt2.png)
+
+Al seleccionar esa opción, te aparecera la ultima versión disponible de R (la cual esta señalada en rojo abajo), dale click y ya se inicia el proceso de descarga.
+
+![](C:/Users/GERARDO/Pictures/Screenshots/capturaRt3.png)
+
+### Instalación
+
+Una vez descargado, seguramente aparecera como archivo ejecutable (.exe) en tu carpeta de descargas, abrelo y sigue las configuraciones por defecto (dale siempre siguiente) y por ultimo finalizar.
+
+![](C:/Users/GERARDO/Pictures/Screenshots/capturaRt6.png)
+
+![](C:/Users/GERARDO/Pictures/Screenshots/capturaRt7.png)
+
+![](C:/Users/GERARDO/Pictures/Screenshots/capturaRt8.png)
+
+Si seguiste las configuraciones por defecto, en tu escritorio deberias tener un acceso directo a R como el que aparece en la siguiente imagen.
+
+![](C:/Users/GERARDO/Pictures/Screenshots/capturaRt9.png)
+
+Si no te sale no te preocupes, ve a Configuración > Aplicaciones > Aplicaciones instaladas y revisa que este R como en la siguiente imagen.
+
+![](C:/Users/GERARDO/Pictures/Screenshots/capturaRt10.png)
+
+## RStudio
+
+RStudio es el programa que diariamente vas a abrir para hacer tus análisis estadísticos, gráficar o generar informes, por definición es un ambiente de trabajo, el cual es mucho más amigable y comodo para programar en R. Lo que quiero decir con esto, es que es posible programar en R sin utilizar RStudio, pero atravesar esa curva de aprendizaje es mucho mas difícil.
+
+### Descarga
+
+Una vez aprietas el botón de descarga de RStudio en el link de posit ([https://posit.co/download/rstudio-desktop/](https://posit.co/download/rstudio-desktop/)), este inicia la descarga automáticamente.
+
+![](C:/Users/GERARDO/Pictures/Screenshots/capturaRStu1.png)
+### Instalación
+
+De nuevo te encontraras con un archivo ejecutable en tu carpeta de descargas, uno como el de la imagen de abajo, abrelo, dale permiso para modificar cosas en tu computadora y sigue las configuraciones predeterminadas.
+
+![](C:/Users/GERARDO/Pictures/Screenshots/capturaRStu2.png)
+
+
+![](C:/Users/GERARDO/Pictures/Screenshots/capturaRStu3.png)
+
+![](C:/Users/GERARDO/Pictures/Screenshots/capturaRStu4.png)
+![](C:/Users/GERARDO/Pictures/Screenshots/capturaRStu5.png)
+
+Una vez finalizada la instalación, al abrir RStudio te va a preguntar que versión de R usar (imagen de abajo), hay una opción de autodetección que ya viene preestablecida, asi que solo dale ok y ya estaría listo para ser usado.
+
+![](C:/Users/GERARDO/Pictures/Screenshots/capturaRStu6.png)
+
+
+Si tienes problemas con la instalación comunicate conmigo a tráves de WhatsApp (+57 313 335 2017) o correo eléctronico (gomezsantiagogerardoesteban\@gmail.com), la idea es que lo hagas antes de nuestro primer encuentro, bien sea lunes 14 o miércoles 16 de octubre, de esa manera ya podemos empezar la clase trabajando en el ambiente y dando nuestros primeros pasos en código.
+
