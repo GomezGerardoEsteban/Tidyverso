@@ -1,0 +1,246 @@
+---
+title: "Practico Módulo 1: Manipulación de bases de datos"
+author: "Gerardo Esteban, Gómez-Santiago"
+date: "January 17, 2025"
+toc: true
+format: 
+  html:
+    code-links:
+      - text: Video YouTube
+        icon: file-code
+        href: https://youtu.be/qbkHkeouuvQ
+      - text: Repositorio GitHub
+        icon: file-code
+        href: https://github.com/GomezGerardoEsteban/Tidyverso/tree/24893b962f2d289ccb6e563547a386807b9f9d9e/PracticosTallerR/Modulo1
+    html-math-method: katex
+    code-tools: true
+    self-contained: true
+execute:
+  warning: false
+
+---
+
+## Pasos previos
+
+- Limpieza del ambiente de trabajo
+- Activación de librerias
+- Carga de la base de datos
+
+```{r}
+#| echo: true
+
+rm(list = ls())
+
+library(foreign)
+library(tidyverse)
+
+base <- read.dta(file = "bases/Latinobarometro_2023_Esp_Stata_v1_0.dta")
+
+base %>% glimpse()
+
+```
+
+## Pregunta 1
+
+La variable `P22ST` mide en una escala del 1 al 10 que tan justificable es para una persona la evasión de impuestos, siendo 1 nada de justificable y 10 totalmente justificable.
+
+Calcula el promedio por país y determina cuales son los tres países que mas justifican
+la evasión de impuestos. Y los tres que menos?
+
+Pista: debes usar la funcion `group_by()` y `summarise()`
+
+### Manipulación variable P22ST
+
+```{r}
+#| echo: true
+
+summary(base$P22ST)
+class(base$P22ST)
+unique(base$P22ST)
+
+base$P22ST <- str_sub(string = base$P22ST, start = 1, end = 2)
+
+base$P22ST <- ifelse(test = base$P22ST == "1 ", 
+                     yes = 1,
+                     no = ifelse(test = base$P22ST == "No",
+                                 yes = NA,
+                                 no = base$P22ST))
+
+base$P22ST <- as.numeric(base$P22ST)
+
+class(base$P22ST)
+
+mean(base$P22ST, na.rm = T)
+
+```
+### Obtención de promedios por país
+
+```{r}
+#| echo: true
+
+base %>% 
+  group_by(idenpa) %>% 
+  summarise(mediaImp = mean(P22ST, na.rm = T))
+
+print(base %>% 
+  group_by(idenpa) %>% 
+  summarise(mediaImp = mean(P22ST, na.rm = T)), n = 17)
+
+
+tabla1 <- base %>% 
+  group_by(idenpa) %>% 
+  summarise(mediaImp = mean(P22ST, na.rm = T)) %>% 
+  arrange(-mediaImp)
+
+```
+
+### Respuesta
+
+Los paises que mas justifican la evasión de impuestos son:
+
+```{r}
+#| echo: true
+
+# Primeros valores
+
+tabla1[1:3, ]
+
+```
+
+Los que menos justifican la evasión de impuestos son:
+
+```{r}
+#| echo: true
+
+# Ultimos valores
+
+tabla1[15:17, ]
+
+```
+
+## Pregunta 2:
+
+La variable `P18ST.A` pregunta si esta **'Muy de acuerdo'**, **'De acuerdo'**, **'En desacuerdo'** o **'Muy en desacuerdo'** con la afirmación: **"La democracia puede tener sus problemas pero es el mejor sistema de gobierno"**.\
+Crea una base de datos que contenga solamente aquellas observaciones que contestaron **'Muy de acuerdo'** o **'De acuerdo'** que a su vez sean 'Hombres' y que sean mayores de 60 años.
+
+Pista: Debes usar la función `filter()` o la notacion matricial generando condiciones logicas en la parte de las filas. El siguiente codigo tiene parte del filtro a generar
+
+
+
+```{r}
+#| echo: true
+
+# Opción 1
+
+base2 <- base %>% 
+  filter(P18ST_A %in% c("Muy de acuerdo", "De acuerdo"),
+         sexo == "Hombre",
+         edad > 60)
+
+# Verifíco valores
+
+# base2 %>% 
+#   select(P18ST_A, sexo, edad)
+
+base2[1:50, c("P18ST_A", "sexo", "edad")]
+
+# Opción 2
+
+base2opc <- base %>% 
+  filter(P18ST_A %in% c("Muy de acuerdo", "De acuerdo") & sexo == "Hombre" & edad > 60)
+
+dim(base2) == dim(base2opc)
+
+```
+
+## Pregunta 3: 
+ 
+Crea una variable que tenga el valor de 1 si la persona es mujer y tiene menos de 30 años y que tome el valor de 0 en cualquier otro caso.
+
+Pista: Debes crear una variable a partir de condiciones logicas, una forma de hacerlo es usando la funcion `ifelse()`. En el test debes evaluar dos condiciones logicas.
+
+```{r}
+#| echo: true
+
+base <- base %>% 
+  mutate(mujerDummy = ifelse(test = sexo == "Mujer" & edad < 30,
+                             yes = 1,
+                             no = 0))
+
+base$mujerDummy[1:20]
+
+sum(base$mujerDummy) # Frecuencia Absoluta
+mean(base$mujerDummy) # Frecuencia Relativa
+
+```
+
+## Pregunta 4:
+
+En la `base.x` de abajo, creé el promedio de la variable `P22ST` para **Argentina**, **Colombia** y **México**.
+
+Crea una `base.y` que tenga el promedio de la experiencia, siendo *experiencia = edad - S10*, y pega el dato a base.x usando la funcion `left_join()`.
+
+```{r}
+#| echo: true
+
+
+# Creación de base receptora de datos
+
+base.x <- base %>% 
+  filter(idenpa %in% c(" Argentina",
+                       " Colombia",
+                       " Mexico")) %>% 
+  group_by(idenpa) %>% 
+  summarise(mediaP22ST = mean(P22ST, na.rm = T))
+
+base.x
+
+# Creación de variable experiencia
+
+base <- base %>% 
+  mutate(experiencia = edad - S10)
+
+# Creación de variable emisora de datos
+
+base.y <- base %>% 
+  filter(idenpa %in% c(" Argentina",
+                       " Colombia",
+                       " Mexico")) %>% 
+  group_by(idenpa) %>% 
+  summarise(mediaExperiencia = mean(experiencia, na.rm = T))
+
+base.y
+
+# Join de bases
+
+# Join con variables llave de mismo nombre
+
+base.x <- base.x %>% 
+  left_join(y = base.y, by = "idenpa")
+
+# Modifico nombre de "idenpa" en 'base.y'
+
+names(base.y)[1] <- "pais"
+
+base.y
+
+# Join con variables llave de distinto nombre
+
+baseJoin2 <- base.x %>% 
+  left_join(y = base.y, by = c("idenpa" = "pais"),
+            suffix = c("_1", "_2"))
+
+baseJoin2
+
+```
+
+
+
+
+
+
+
+
+
+
+
