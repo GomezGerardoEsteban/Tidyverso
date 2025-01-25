@@ -1,0 +1,237 @@
+---
+title: "Practico Módulo 2: Análisis Univariado"
+author: "Gerardo Esteban, Gómez-Santiago"
+date: "January 25, 2025"
+toc: true
+format: 
+  html:
+    code-links:
+      - text: Video YouTube
+        icon: file-code
+        href: https://youtu.be/hFdyORlRUgk
+      - text: Repositorio GitHub
+        icon: file-code
+        href: https://github.com/GomezGerardoEsteban/Tidyverso/tree/33b01e7afeeea90655306bd83e988b0d51d275e9/PracticosTallerR/Modulo2
+    html-math-method: katex
+    code-tools: true
+    self-contained: true
+execute:
+  warning: false
+---
+
+## Pasos previos
+
+- Limpieza del ambiente de trabajo
+- Directorio de trabajo
+- Activación de librerias
+- Carga de la base de datos
+
+```{r}
+#| echo: true
+#| message: false
+#| warning: false
+
+rm(list=ls())
+
+setwd("E:/Documents/Escritorio/tidyverso/tidyverso/cursoRLunes/RLunes/scripts/bases/taller3")
+
+library(tidyverse)
+library(haven)
+library(wbstats)
+
+base <- read_dta(file = "bases/Latinobarometro_2023_Esp_Stata_v1_0.dta")
+
+baseBM <- wb_data(indicator = c("NY.GDP.PCAP.KD",     # PIB per capita
+                                "SP.RUR.TOTL.ZS",     # Porcentaje de poblacion rural
+                                "SI.POV.GINI",        # Indice de gini
+                                "NE.TRD.GNFS.ZS",     # Comercio como porcentaje del PIB
+                                "SP.DYN.LE00.IN",     # Expectativa de vida al nacer
+                                "SH.ALC.PCAP.LI",     # Consumo de alcohol per capita
+                                "VC.IHR.PSRC.P5"      # Homicidios intencionales por 100,000 personas
+                                ))
+```
+
+Los datos que pueden obtener con `wbstats` pueden consultarlos en [datos Banco Mundial](https://data.worldbank.org/).
+
+## Pregunta 1
+
+La variable P6STGBS hace la siguiente pregunta: **¿Considera Ud. que la situación económica actual del país está mucho mejor, un poco mejor, igual, un poco peor, o mucho peor que hace doce meses?**
+
+Los valores posibles de respuesta son:
+
+ - Mucho mejor
+ - Un poco mejor
+ - Igual
+ - Un poco mejor
+ - Mucho peor
+ 
+1. Crea una variable categórica de tres valores, a partir de los siguientes criterios:
+
+- Si P6STGBS es igual a "Mucho mejor" o "Un poco mejor", entonces que sea igual a "Mejor"
+- Si P6STGBS es igual a "Igual", entonces que sea igual a "Igual"
+- Si P6STGBS es igual a "Un poco peor" o "Mucho peor", entonces que sea igual a "Peor"
+
+```{r}
+#| echo: true
+
+# Verifico valores unicos
+
+unique(base$P6STGBS)
+
+base %>% 
+  select(P6STGBS) %>% 
+  distinct()
+
+# Creo una variable tipo factor
+
+base$economia <- factor(x = case_when(base$P6STGBS %in% c(1,2) ~ "Mejor",
+                           base$P6STGBS == 3 ~ "Igual",
+                           base$P6STGBS %in% c(4,5) ~ "Peor",
+                           base$P6STGBS < 0 ~ "No sabe/No contesta"),
+                        levels = c("Mejor",
+                                   "Igual",
+                                   "Peor",
+                                   "No sabe/No contesta"))
+
+summary(base$economia)
+
+```
+
+
+2. Una vez creada la variable, obten el porcentaje que considera que la economía esta "Mejor" por país y almacenalos en una tabla. Si te anímas, obten una segunda tabla desagregando la información no solo por país sino  tambien por sexo.
+
+```{r}
+#| echo: true
+#| warning: false
+#| message: false
+
+# Obtención de frecuencias en un data.frame
+
+tablaFrecuencias <- base %>% 
+  group_by(idenpa, economia) %>% 
+  tally() %>% 
+  ungroup() %>% 
+  group_by(idenpa) %>% 
+  mutate(total = sum(n),
+         frecRel = n/total,
+         porcentaje = frecRel * 100)
+
+# Verificación de los calculos
+
+tablaFrecuencias %>% 
+  group_by(idenpa) %>% 
+  summarise(verificacion = sum(porcentaje))
+
+tablaFrecuencias <- tablaFrecuencias %>% 
+  filter(economia == "Mejor")
+
+tablaFrecuencias
+
+# Pegado de la etiqueta como texto
+
+nombres <- names(attr(x = tablaFrecuencias$idenpa, which = "labels"))
+etiqueta <- attr(x = tablaFrecuencias$idenpa, which = "labels")
+
+dfNombres <- tibble(etiqueta = etiqueta,
+                    nombres = nombres)
+
+
+tablaFrecuencias <- tablaFrecuencias %>% 
+  left_join(y = dfNombres,
+            by = c("idenpa" = "etiqueta"))
+
+tablaFrecuencias <- tablaFrecuencias %>% 
+  relocate(nombres, .after = idenpa)
+
+tablaFrecuencias
+
+```
+
+Obtención de las frecuencias desagregadas por país y por sexo
+
+```{r}
+#| echo: true
+#| warning: false
+#| message: false
+
+
+tablaAncha <- base %>% 
+  group_by(idenpa, sexo, economia) %>% 
+  tally() %>% 
+  ungroup() %>% 
+  group_by(idenpa, sexo) %>% 
+  mutate(total = sum(n),
+         frecRel = n/total,
+         porcentaje = frecRel*100) %>% 
+  filter(economia=="Mejor") %>% 
+  select(idenpa, sexo, porcentaje) %>% 
+  spread(key = sexo, value = porcentaje)  # Comando para presentar la tabla como una tabla de contingencia o tabla de doble entrada
+
+tablaAncha
+
+```
+
+## Pregunta 2 
+
+El objeto `baseBM` tiene información del PIB per capita, el porcentaje de población rural, el indice de gini, el comercio como porcentaje del PIB, la expectativa de vida al nacer, el consumo de alcohol per cápita y los homicidios intencionales por casa 100 mil habitantes, para distintos paises del mundo entre 1960 y 2022. Obviamente hay datos perdidos, es decir las mediciones para algunos paises, en algunos años no están. 
+
+Filtra la base para 10 países que te interesen, selecciona la variable que mas te interese y obten las siguientes medidas estadisticas, para los países seleccionados:
+
+- Media 
+- Mediana 
+- Desvio Estandar 
+- Varianza 
+- Minimo 
+- Maximo 
+- Rango 
+
+Si te animas, obten el promedio para todos los países para los distintos años
+
+Filtro de países a partír de un vector
+
+```{r}
+#| echo: true
+#| warning: false
+#| message: false
+
+baseBM %>% glimpse()
+
+paises <- c("CRI", "COL", "ARG", "CHL", "BRA",
+            "USA", "CAN", "MEX", "JPN")
+
+
+baseBM2 <- baseBM %>% 
+  filter(iso3c %in% paises)
+
+```
+
+Obtención de medidas estadísticas
+
+```{r}
+
+resumenMedidas <- baseBM2 %>% 
+  group_by(iso3c) %>% 
+  summarise(media = mean(SP.DYN.LE00.IN, na.rm = T),
+            mediana = median(SP.DYN.LE00.IN, na.rm = T),
+            desvio = sd(SP.DYN.LE00.IN, na.rm = T),
+            varianza = var(SP.DYN.LE00.IN, na.rm = T),
+            minimo = min(SP.DYN.LE00.IN, na.rm = T),
+            maximo = max(SP.DYN.LE00.IN, na.rm = T))
+
+resumenMedidas <- resumenMedidas %>% 
+  mutate(rango = maximo - minimo)
+
+resumenMedidas
+
+```
+
+Obtención de el promedio de la variable para los distintos años, esto puede ser útil para identificar tendencias en la variable. En este caso vemos que el valor de la expectativa de vida al nacer, tiene una tendencia creciente.
+
+```{r}
+
+baseBM2 %>%
+  group_by(date) %>% 
+  summarise(mediaAños = mean(SP.DYN.LE00.IN, na.rm=T))
+
+```
+
