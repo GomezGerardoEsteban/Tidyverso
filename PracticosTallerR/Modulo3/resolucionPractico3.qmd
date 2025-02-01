@@ -1,0 +1,143 @@
+---
+title: "Practico Módulo 3: Análisis Bivariado"
+author: "Gerardo Esteban, Gómez-Santiago"
+date: "January 31, 2025"
+toc: true
+format: 
+  html:
+    code-links:
+      - text: Video YouTube
+        icon: file-code
+        href: https://youtu.be/U-LVeb_-dUI
+      - text: Repositorio GitHub
+        icon: file-code
+        href: https://github.com/GomezGerardoEsteban/Tidyverso/tree/33b01e7afeeea90655306bd83e988b0d51d275e9/PracticosTallerR/Modulo3
+    html-math-method: katex
+    code-tools: true
+    self-contained: true
+execute:
+  warning: false
+---
+
+## Introducción
+
+El objetivo de este práctico es consolidar conocimiento en torno al calculo de medidas estadísticas que nos permiten afirmar si existe
+o no una asociación significativa entre variables.\
+Para este análisis utilizaremos la base `Advertising.csv`, la cual contiene 200 observaciones de gasto en publicidad por distintos medios (TV, radio y periodico) y el valor de las ventas.
+
+Se espera naturalmente que exista cierto grado de asociación entre el gasto en publicidad y el nivel de ventas, por lo que el objetivo es verificar cual de estos medios presenta una mayor asociación con el nivel de ventas y por lo tanto resulta más efectivo como estrategia de mercadeo.
+
+## Pasos previos
+
+- Limpeza del ambiente de trabajo
+- Selección del directorio de trabajo
+- Carga de la base de datos
+
+```{r}
+
+rm(list = ls())
+
+
+getwd()
+
+setwd("E:/Documents/Escritorio/tidyverso/tidyverso/cursoRLunes/RLunes/scripts/bases/taller3/bases")
+
+
+base <- read.csv(file = "Advertising.csv")
+
+
+library(glmtoolbox)
+data("advertising")
+
+library(tidyverse)
+
+base %>% glimpse()
+
+summary(base)
+
+```
+
+## Punto 1
+ 
+Obtenga la matriz de covarianzas y de correlaciones de las cuatro variables. Resulta de particular interes conocer la correlación del gasto en públicidad de cada uno de los medios de comunicación con las ventas ¿son todos significativos? ¿Cuál presenta una asociación lineal mas fuerte?
+
+```{r}
+
+cov(base %>% 
+      select(-X))
+
+cor(base %>% 
+      select(-X))
+
+cor.test(base$TV, base$sales)
+cor.test(base$radio, base$sales)
+cor.test(base$newspaper, base$sales)
+
+
+library(GGally)
+
+
+ggpairs(data = base %>% select(-X))
+
+```
+
+## Punto 2 
+
+Calcula una regresión simple utilizando como variable independiente alguna de las variables de gasto y como variable dependiente el valor de las ventas.
+
+```{r}
+
+reg <- lm(formula = sales ~ TV,
+          data = base)
+
+summary(reg)
+
+```
+
+## Punto 3 
+
+Realiza un gráfico de dispersión con la recta de regresión utilizando las variables que utilizaste en el punto 2.
+
+```{r}
+
+base %>% 
+  ggplot(mapping = aes(x = TV, y = sales)) +
+  geom_point() +
+  geom_smooth(method = "lm",
+              se = F)
+
+base %>% 
+  ggplot(mapping = aes(x = TV, y = sales)) +
+  geom_point() +
+  geom_abline(intercept = reg$coefficients[1],
+              slope = reg$coefficients[2])
+
+
+g <- base %>% 
+  ggplot(mapping = aes(x = TV, y = sales)) +
+  geom_point() +
+  geom_smooth(method = "lm",
+              se = F) +
+  labs(title = "Relación entre gasto en publicidad en TV y ventas",
+       x = "Gasto en TV",
+       y = "Ventas",
+       caption = "Fuente: Advertising dataset")
+
+g
+
+```
+
+Comando para exportar gráficos de R en tu directorio de trabajo
+
+```{r}
+
+ggsave(filename = "graficoDispersion.png",  # Nombre del grafico
+       plot = g,                            # Objeto
+       dpi = 500,                           # Calidad
+       width = 6,                           # Ancho
+       height = 4)                          # Alto
+
+
+```
+
+
