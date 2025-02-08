@@ -1,0 +1,212 @@
+---
+title: "Práctico Módulo 4: Inferencia Estadística"
+author: "Gerardo Esteban, Gómez-Santiago"
+date: "February 07, 2025"
+toc: true
+format: 
+  html:
+    code-links:
+      - text: Video YouTube
+        icon: file-code
+        href: https://youtu.be/8Z2INs6qWgY
+      - text: Repositorio GitHub
+        icon: file-code
+        href: https://github.com/GomezGerardoEsteban/Tidyverso/tree/6430f76c002acf1dfc07993b51d8aafa86e9b232/PracticosTallerR/Modulo4
+    html-math-method: katex
+    code-tools: true
+    self-contained: true
+execute:
+  warning: false
+---
+
+## Introducción
+
+El objetivo de este práctico es reforzar los conocimientos y aplicaciones de Inferencia estadística. La base `muestraIcfes.xlsx` es una base que contiene una muestra aleatoria de los resultados de la Prueba Saber 11 para cada uno de los municipios de Cundinamarca en el año 2020.\
+Aclaración: (los municipios que cuentan con 100 observaciones son aquellos de los que se obtuvo una muestra, los que tienen menos observaciones son municipios cuya cantidad de estudiantes que presentaron la prueba es menor a 100 por lo tanto tenemos la población total).
+
+## Pasos previos
+
+- Limpieza del ambiente de trabajo
+- Definición del directorio de trabajo
+- Activación de librerías
+- Carga de la base de datos
+
+```{r}
+#| echo: true
+#| warning: false
+#| message: false
+
+
+rm(list = ls())
+
+setwd("E:/Documents/Escritorio/tidyverso/tidyverso/cursoRLunes/RLunes/scripts/bases/taller3/bases")
+
+library(tidyverse)
+library(readxl)
+
+base <- read_xlsx(path = "muestraIcfes.xlsx")
+
+```
+
+## Resolución
+
+### Punto 1. 
+
+Calcule los intervalos de confianza de la media del puntaje global (varible `PUNT_GLOBAL`) para cada municipio con un nivel de confianza del 95%.
+
+```{r}
+
+tablaIntervalos <- base %>% 
+  group_by(ESTU_MCPIO_RESIDE) %>% 
+  summarise(media = mean(PUNT_GLOBAL, na.rm = T),
+            desvio = sd(PUNT_GLOBAL, na.rm = T),
+            n = n()) %>% 
+  mutate(quantil95 = qt(p = 0.975, df = n-1),
+         errorEstandar = desvio/sqrt(n),
+         margen = quantil95*errorEstandar,
+         Li = media - margen,
+         Ls = media + margen
+         )
+
+writexl::write_xlsx(x = tablaIntervalos, path = "tablaIntervalosIcfes.xlsx")
+
+```
+
+### Punto 2. 
+
+Debido a que son muchos municipios el gráfico de los intervalos de confianza resulta incomodo, intenta hacerlo, pero sino, grafica solamente los intervalos de confianza de los 10 municipios con mayor y de los 10 municipios con menor puntaje.
+
+```{r}
+
+tablaIntervalosGrafico <- tablaIntervalos %>% 
+  arrange(-media) %>% 
+  mutate(ind = 1:nrow(tablaIntervalos)) %>% 
+  filter(ind %in% c(1:10, (nrow(tablaIntervalos)-9):nrow(tablaIntervalos)))
+
+tablaIntervalosGrafico$tipo <- ifelse(test = tablaIntervalosGrafico$ind > 10,
+                                      yes = "Bajos",
+                                      no = "Altos")
+
+tablaIntervalosGrafico %>% 
+  ggplot(mapping = aes(x = media, y = reorder(ESTU_MCPIO_RESIDE, media), 
+                       color = tipo)) +
+  geom_point() +
+  geom_errorbar(mapping = aes(xmin = Li, xmax = Ls))
+
+
+
+```
+### Punto 3. 
+
+La variable `ESTU_GENERO` dicotomiza a los estudiantes en hombres y mujeres, realice una prueba de hipótesis de diferencia de medias para verificar si existen diferencias significativas el puntaje global.
+
+#### Opción 1: `t.test()`
+
+El comando `t.test()` realiza la prueba de diferencia de medias entre dos categorías, en este caso entre hombres y mujeres.\
+Las especificaciones por defecto son:
+
+- $Hipotesis \hspace{0.1cm} Nula \hspace{0.1cm} (H_0): \bar{X_1} - \bar{X_2} = 0$
+- $Hipotesis \hspace{0.1cm} Alternativa \hspace{0.1cm} (H_1): \bar{X_1} - \bar{X_2} \neq 0$
+- Nivel de confianza $95\%$
+
+```{r}
+#| echo: true
+#| warning: false
+#| message: false
+
+t.test(base$PUNT_GLOBAL ~ base$ESTU_GENERO)
+```
+
+#### Opción 2: `lm()` 
+
+Otra manera de realizar una prueba de diferencia de medias es corriendo una regresión lineal con la variable cuantitativa como variable dependiente y la variable categórica como variable independiente.
+La significatividad del coeficiente indica que la diferencia es significativa, y el valor del coeficiente la variación que ocurriria en promedio si se pasa de una categoría a otra.
+
+
+```{r}
+#| echo: true
+#| warning: false
+#| message: false
+
+
+reg <- lm(formula = base$PUNT_GLOBAL ~ base$ESTU_GENERO)
+
+summary(reg)
+
+```
+
+### Punto 4. 
+
+La variable `FAMI_ESTRATOVIVIENDA` nos informa sobre las condiciones socioeconomicas del hogar, a mayor estrato en general, mayores ingresos. Realice una prueba ANOVA para verificar si existen diferencias significativas en el Puntaje Global, tomando como categoria de referencia "Sin Estrato".
+
+```{r}
+#| echo: true
+#| warning: false
+#| message: false
+
+
+# Verificación de valores unicos
+
+unique(base$FAMI_ESTRATOVIVIENDA)
+
+# Filtro de NA
+
+base <- base %>% 
+  filter(!is.na(FAMI_ESTRATOVIVIENDA))
+
+# Creción de vector con orden deseado para variable factor
+
+vector <- unique(base$FAMI_ESTRATOVIVIENDA)
+vector <- sort(vector)
+vector <- c(vector[7], vector[1:6])
+
+# Variable factor
+
+base$FAMI_ESTRATOVIVIENDA <- factor(x = base$FAMI_ESTRATOVIVIENDA,
+                                    levels = vector)
+
+
+summary(base$FAMI_ESTRATOVIVIENDA)
+
+# Prueba ANOVA
+
+anova <- lm(formula = base$PUNT_GLOBAL ~ base$FAMI_ESTRATOVIVIENDA)
+
+summary(anova)
+
+# Grafico de intervalos de confianza por Estrato
+
+tabla_estratos <- base %>% 
+  group_by(FAMI_ESTRATOVIVIENDA) %>% 
+  summarise(media = mean(PUNT_GLOBAL, na.rm = T),
+            desvio = sd(PUNT_GLOBAL, na.rm = T),
+            n = n()) %>% 
+  mutate(quantil95 = qt(p = 0.975, df = n-1),
+         errorEstandar = desvio/sqrt(n),
+         margen = quantil95*errorEstandar,
+         Li = media - margen,
+         Ls = media + margen
+         )
+
+
+tabla_estratos %>% 
+  ggplot(mapping = aes(x = FAMI_ESTRATOVIVIENDA, y = media)) +
+  geom_point() +
+  geom_errorbar(mapping = aes(ymin = Li, ymax = Ls))
+
+```
+
+### Punto 5. 
+
+Pregunta Teórica: ¿porque no tiene sentido calcular los intervalos de confianza en los municipios con menos de 100 observaciones?
+
+Debido a que contamos con la población de examenes en municipios con menos de 100 observaciones, no tiene sentido hacer inferencia estadística en estos municipios, pues el estimador puntual se corresponde con el parametro poblacional.
+
+
+
+
+
+
+
+
+
