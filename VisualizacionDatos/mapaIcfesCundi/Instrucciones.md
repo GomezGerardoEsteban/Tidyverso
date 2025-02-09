@@ -6,3 +6,5 @@ Para realizar la visualización necesitan tener las bases `tablaMedias.RData` y 
 El procesamiento de los datos para generar `tablaMedias.RData` y `datos_mapa.RData` se encuentra en el script `clase5_PreparacionDatos.R`, requieren las bases almacenadas en la carpeta `bases` de este repositorio para correr ese script, pero este NO ES INDISPENSABLE PARA LA VISUALIZACIÓN.
 
 Las librerías a utilizar, están especificadas en el script `clase5_ComandosPrevios.R`, lo ideal es correr este script antes de `Clase5Video.R`.
+
+El video con el desarrollo de la visualización esta disponible en [este link](https://youtu.be/WXs75xmKJFU)
