@@ -1,0 +1,162 @@
+---
+title: "Practico Módulo 1: Funciones y Procesos Iterados"
+subtitle: "Programación funcional y estadística avanzada"
+author: "Gerardo Esteban, Gómez-Santiago"
+date: "January 17, 2025"
+toc: true
+format: 
+  html:
+    code-links:
+      - text: Video YouTube
+        icon: file-code
+        href: https://youtu.be/YX1qL_SDntU
+      - text: Repositorio GitHub
+        icon: file-code
+        href: https://github.com/GomezGerardoEsteban/Tidyverso/tree/761537f6add6b0169bed31202597dbfa52588080/PracticosTallerRNivel2/Modulo1
+    html-math-method: katex
+    code-tools: true
+    self-contained: true
+execute:
+  warning: false
+---
+
+## Pasos previos
+
+- Limpieza del ambiente de trabajo
+- Definición del directorio de trabajo
+- Activación de librerías
+- Carga de datos
+
+```{r}
+
+rm(list = ls())
+
+getwd()
+setwd("E:/Documents/Escritorio/tidyverso/tidyverso/cursoRLunes/RLunes/Nivel2")
+
+library(tidyverse)
+library(FactoMineR)
+
+data("decathlon")
+
+decathlon %>% glimpse()
+
+```
+ 
+## Ejercicio 1:
+
+Una de las principales aplicaciones de la inferencia estadística es el cálculo de intervalos de confianza. Crea una función que tome como argumento una variable numérica y devuelva los intervalos de confianza de la media.
+
+El calculo podria ser algo como esto:
+
+
+```{r}
+
+decathlon %>% 
+  summarise(media = mean(`100m`, na.rm = T),
+            desvio = sd(`100m`, na.rm = T),
+            n = n()) %>% 
+  mutate(margen = qt(p = 0.975, df = n-1)*desvio/sqrt(n),
+         Li = media - margen,
+         Ls = media + margen)
+
+
+```
+
+```{r}
+
+inter_media <- function (df, var) {
+  
+  df %>% 
+    summarise(media = mean(.data[[var]], na.rm = T),
+            desvio = sd(.data[[var]], na.rm = T),
+            n = n()) %>% 
+    mutate(margen = qt(p = 0.975, df = n-1)*desvio/sqrt(n),
+         Li = media - margen,
+         Ls = media + margen)
+  
+  
+}
+
+inter_media(df = decathlon, var = "100m")
+inter_media(df = decathlon, var = "110m.hurdle")
+
+```
+
+## Ejercicio 2: 
+
+Utiliza un bucle `for` para aplicar la función del ejercicio 1 sobre 5 variables numéricas que tu elijas. Recuerda definir el contenedor, el recorrido y el proceso.
+
+```{r}
+
+contenedor <- vector(mode = "list", length = 5)
+
+variables <- c("100m", "400m", "110m.hurdle", "1500m", "High.jump")
+
+
+for (i in 1:length(variables)) {
+  
+  contenedor[[i]] <- inter_media(df = decathlon, var = variables[i])
+    
+}
+
+contenedor[[1]]
+contenedor[[2]]
+
+contenedor <- contenedor %>% bind_rows()
+
+contenedor$prueba <- variables
+
+contenedor
+
+```
+
+## Ejercicio 3: 
+
+Puede ser de interés conocer la diferencia de cada observación respecto al promedio. Crea una función que realice ese caclulo, si la diferencia es mayor a cero quiere decir que la observacion tiene una medida mayor a la media y si es menor a cero quiere decir que tiene una medida menor a la media.
+
+Podria ser algo asi si usas R Base:
+
+```{r}
+
+dif_media <- function(df, var){
+  
+  k <- mean(df[[var]])
+  
+  l <- df[var] - k
+  
+  df$difMedia <- l
+  
+  df <- df$difMedia
+  
+  return(df)
+  
+}
+
+prueba1 <- dif_media(df = decathlon, var = "100m")
+
+prueba1
+
+```
+
+## Ejercicio 4: 
+
+Utiliza la función `map` para aplicar la función del ejercicio 3 sobre las mismas 5 variables del ejercicio 2. Seria ideal que eso quede almacenado directamente en una base de datos, te recomiendo en ese caso usar `map_df`.
+
+```{r}
+
+variables
+
+res_dif <- map_dfc(.x = variables,
+                   .f = ~{
+                     
+                     dif_media(df = decathlon,
+                               var = .x)
+                     
+                   })
+
+res_dif
+
+```
+
+
