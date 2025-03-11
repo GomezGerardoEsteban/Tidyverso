@@ -1,0 +1,228 @@
+---
+title: "Practico Módulo 3: Análisis de Componentes Principales y Clusters"
+subtitle: "Programación funcional y estadística avanzada"
+author: "Gerardo Esteban, Gómez-Santiago"
+date: "February 11, 2025"
+toc: true
+format: 
+  html:
+    code-links:
+      - text: Video YouTube
+        icon: file-code
+        href: https://youtu.be/SXw-6MofMpM
+      - text: Repositorio GitHub
+        icon: file-code
+        href: https://github.com/GomezGerardoEsteban/Tidyverso/tree/f39c60a5608e1080272e4d82fb9110d6a7317c6a/PracticosTallerRNivel2/Modulo3
+    html-math-method: katex
+    code-tools: true
+    self-contained: true
+execute:
+  warning: false
+---
+
+La base 'basePractico3.RData' contiene información de 6 tipos de problematicas de seguridad en los municipios del departamento de Antioquia. La idea es replicar el análisis de la clase con estos datos cuya dimensión territorial es menor y por lo tanto puede ser mas pertinente.
+
+## Ejercicio 1
+
+-   Calcula las componentes principales de las 6 variables (Extorsión, Hurto, Homicidio, V.Iterpersonal, Secuestro y V.Intrafamiliar).
+-   Cuales son las variables que mas aportan en la componente principal 1 y en la componente principal 2?
+-   La variable secuestro tiene muchos ceros, que pasa si la sacamos del análisis, afecta significativamente las conclusiones previas?
+-   Consideras que existen valores extremos en los datos?
+
+```{r}
+
+rm(list = ls())
+
+library(tidyverse)
+library(factoextra)
+
+load(file = "basePractico3.RData")
+
+base %>% glimpse()
+
+# PCA
+
+matrizPCA <- base %>% 
+  select(3:8) %>% 
+  scale()
+
+pca <- princomp(x = matrizPCA)
+
+summary(pca, loadings = T)
+
+fviz_pca_biplot(X = pca,
+                pointshape = 21,
+                pointsize = "cos2",
+                repel = T,
+                fill.ind = "orangered")
+
+matrizPCA2 <- base %>% 
+  select(Extorsión, Hurto, V.Interpersonal, Homicidio, V.Intrafamiliar) %>% 
+  scale()
+
+
+# PCA sin secuestro
+
+pca2 <- princomp(x = matrizPCA2)
+
+summary(pca2, loadings = T)
+
+fviz_pca_biplot(X = pca2,
+                pointshape = 21,
+                pointsize = "cos2",
+                repel = T,
+                fill.ind = "orangered")
+
+
+
+
+```
+
+## Ejercicio 2
+
+El método de kmeans para obtener subgrupos es bastante simple, utiliza el criterio de la silueta para determinar cuantos clusters usar y calcula los clusters
+
+Realiza el grafico de biplot coloreando los puntos por cluster. Si previamente consideraste que habian valores extremos, sacalos y vuelve a calcular los grupos con kmeans, ten cuidado, de pronto con este cambio, el metodo de la silueta pide otro numero de clusters.
+
+
+```{r}
+
+fviz_nbclust(x = matrizPCA, FUNcluster = kmeans, method = "silhouette")
+
+
+kmedias <- kmeans(x = matrizPCA, centers = 4, nstart = 8)
+
+kmedias$tot.withinss
+
+clusters <- kmedias$cluster
+
+fviz_pca_biplot(X = pca, 
+                pointshape = 21,
+                pointsize = "cos2",
+                fill.ind = as.factor(clusters))
+
+
+matrizPCA3 <- scale(matrizPCA[-c(59, 92, 113, 109), ])
+
+pca3 <- princomp(x = matrizPCA3)
+
+summary(pca3, loadings = T)
+
+fviz_nbclust(x = matrizPCA3, FUNcluster = kmeans, method = "silhouette")
+
+kmedias3 <- kmeans(x = matrizPCA3, centers = 3, nstart = 23)
+
+# 23
+kmedias3$tot.withinss
+
+clusters3 <- kmedias3$cluster
+
+fviz_pca_biplot(X = pca3,
+                pointshape = 21,
+                fill.ind = as.factor(clusters3))
+
+```
+
+## Ejercicio 3
+
+¿Te animas a calcular un indice a partir de los valores de las componentes principales e identificar los 10 municipios con mas problemas y los 10 con menos?
+
+¿Estaran ubicados cerca desde el punto de vista geografico?
+
+```{r}
+baseInd <- tibble(municipio = base$Entidad)
+
+eig <- eigen(x = cor(matrizPCA))
+
+eig$values
+
+for(i in 1:6){
+  
+  baseInd[,i+1] <- pca$scores[,i]*eig$values[i]
+
+}
+
+baseInd$ind <- rowSums(baseInd[,c(2:7)])
+
+baseInd$ind <- GGally::rescale01(baseInd$ind)*1 
+
+baseInd$ind
+
+# Analisis espacial
+
+library(sf)
+
+mapa <- st_read(dsn = "pca/MGN_MPIO_POLITICO.shp")
+
+mapa %>% glimpse()
+
+mapa <- mapa %>% 
+  filter(DPTO_CCDGO == "05")
+
+mapa <- mapa %>% 
+  mutate(codigo = str_c(DPTO_CCDGO, MPIO_CCDGO)) %>% 
+  left_join(y = baseInd %>% 
+              mutate(codigo = base$Código.Entidad) %>% 
+              select(codigo, ind, municipio),
+            by = "codigo")
+
+
+mapa %>% 
+  ggplot() +
+  geom_sf(mapping = aes(fill = ind)) +
+  scale_fill_continuous(type = "viridis")
+```
+
+Los 10 municipios con menos problemas según el índice construido a partir de PCA
+
+```{r}
+
+baseInd %>% 
+  arrange(ind) %>% 
+  mutate(id = 1:nrow(baseInd)) %>% 
+  filter(id < 11) %>% 
+  select(municipio, ind, id)
+
+base <- base %>% 
+  left_join(y = 
+              baseInd %>%
+              arrange(ind) %>% 
+              mutate(id = 1:nrow(baseInd)) %>% 
+              filter(id < 11) %>% 
+              select(municipio, id), 
+            by = c("Entidad" = "municipio")) %>% 
+  mutate(id = ifelse(is.na(id), 0, 1))
+
+fviz_pca_biplot(X = pca, 
+                pointshape = 21,
+                fill.ind = as.factor(base$id))
+
+```
+
+Los 10 municipios con más problemas según el índice construido a partir de PCA
+
+```{r}
+
+baseInd %>% 
+  arrange(desc(ind)) %>% 
+  mutate(id = 1:nrow(baseInd)) %>% 
+  filter(id < 11) %>% 
+  select(municipio, ind, id)
+
+base <- base %>% 
+  left_join(y = 
+              baseInd %>%
+              arrange(-ind) %>% 
+              mutate(id = 1:nrow(baseInd)) %>% 
+              filter(id < 11) %>% 
+              select(municipio, id), 
+            by = c("Entidad" = "municipio")) %>% 
+  mutate(id.y = ifelse(is.na(id.y), 0, 1))
+
+fviz_pca_biplot(X = pca, 
+                pointshape = 21,
+                fill.ind = as.factor(base$id.y))
+
+```
+
+
