@@ -1,0 +1,157 @@
+---
+title: "Gráficos con doble eje"
+author: "Gerardo Esteban Gómez-Santiago"
+date: "2025-04-02"
+format: html
+editor: visual
+---
+
+## Introducción
+
+El patrón general de los gráficos de series de tiempo, es colocar la unidad de tiempo en el `eje x` y la variable de interes en el `eje y`. El resultado de esto es un gráfico de spaguetti que nos sirve para identificar la tendencia de una variable o para señalar puntos en el tiempo donde algo ocurrio.\
+Cuando queremos mostrar la relación entre dos variables a lo largo del tiempo, solemos recurrir a un gráfico con la misma estructura, pero al cual le incorporamos un segundo eje. A la mayoría se le hara familiar esta funcionalidad en Excel, nos permite ver la relación entre las dos variables (generalmente una correlación inversa) leyendo las unidades de medida de cada variable en un eje distinto. 
+
+¿Podemos hacer eso en R y puntualmente con `ggplot2`?
+
+Sí, es bastante sencillo una vez se conoce la herramienta.
+
+Para este ejemplo haremos un gráfico en el que se muestra la relación inversa entre el precio promedio anual del kilovatio-hora en Colombia y las precipitaciones (milimetros de lluvia) anuales. Esta relación inversa se debe a la preponderancia de la generación hidroeléctrica en Colombia y la relativa libertad de mercado con que se comercia la energía eléctrica entre generadores y distribuidores desde 1992.
+
+Para centrarnos en la visualización, los datos se encuentran ya procesados y estan disponibles en la base `precios_year.RData`. El valor de las precipitaciones anuales se obtuvo del Banco Mundial (`Annual.Mean`), el precio del kilovatio-hora (kWh) proviene de XM (Empresa encargada de la coordinación del sector eléctrico colombiano) cuyo valor se actualizó utilizando el IPC del Banco de la Republica (`precioMedio`).
+
+## Código
+
+A continuación vemos el paso a paso para elaborar la visualización con doble eje.
+
+### Pasos previos
+
+Como siempre, limpiamos el ambiente de trabajo, activamos librerías y cargamos los datos
+
+```{r}
+
+# Limpieza del ambiente de trabajo
+
+rm(list = ls()) 
+
+# Activación de librerías
+
+library(tidyverse)
+
+# Carga de los datos
+
+load("vizTidyverso/precios_year.Rdata")
+
+```
+
+### Visualización inicial
+
+El gráfico lo vamos a realizar utilizando `ggplot2`, vamos a empezar gráficando la serie de precipitaciones anuales.
+
+```{r}
+
+g <- precios_year %>% 
+  filter(year > 1995) %>% 
+  ggplot()+
+  geom_line(mapping = aes(x = year, y = Annual.Mean))
+
+g
+
+```
+
+Agreguemos ahora la segunda serie, con los datos del precio promedio anual del kWh, pero sin especificar aún que su escala se lea en un segundo eje, adicionemos un color a esta segunda seríe para identificarla facilmente.
+
+```{r}
+
+g + geom_line(mapping = aes(x = year, y = precioMedio),
+              color = "red")
+
+```
+
+En el gráfico se alcanza a percibir un comportamiento inverso entre las seríes, se destacan los valores entre 1995 y 2000 así como 2015, esta relació inversa va a ser más clara si graficamos la segunda serie en un segundo eje.
+
+### Incorporación de segundo eje
+
+La incorporación de este segundo eje requiere:
+
+- Ajustar la escala de una de las variables dentro del `mapping`, teniendo en cuenta su relación respecto a la otra.
+- Especificar el cambio de escala en `scale_y_continuous()`, utilizando la función `sec_axis()`.
+
+Del gráfico anterior, sabemos que la unidad de medida del precio del kWh es menor a la unidad de medida de las precipiaciones, lo que debemos hacer es aplicar una transformación matemática que permita que ambas variables tienen unidades de medida similares. Puntualmente, debemos multiplicar el precio del kWh o dividir las precipitaciones.
+
+```{r}
+
+g + geom_line(mapping = aes(x = year, y = precioMedio*10),
+              color = "red")
+
+```
+
+Con esta transformación ya es más clara la relación inversa entre las variables, pero no tenemos los valores indicativos de una de ellas, para agregarlo (incorporar un eje en la derecha que nos muestre los valores del precio del kWh), agreguemoslo con `scale_y_continuous()` y `sec_axis()`.
+
+```{r}
+
+g + geom_line(mapping = aes(x = year, 
+                            y = precioMedio*10),
+              color = "red") +
+  scale_y_continuous(sec.axis = sec_axis(transform = ~./10,
+                                         name = "Precio kWh"))
+
+
+
+```
+
+Ahora es posible saber que cuando las precipitaciones presentaron un mínimo en 2015, rondando los 2,000 milímetros, el precio del kWh alcanzo un máximo por encima de los 500 pesos colombianos.
+
+### Correcciones de diseño
+
+Agregamos titulos, modificamos tipos de fuente, colores y estilos.
+
+```{r}
+
+library(extrafont)
+
+g <- precios_year %>% 
+  filter(year > 1995) %>% 
+  ggplot() +
+  geom_line(mapping = aes(x = year, y = Annual.Mean),
+                          color = "#395FA5", 
+                          linewidth = 1.) +
+  geom_line(mapping = aes(x = year, y = precioMedio*10),
+                          color = "#A54339", 
+                          linewidth = 1.) +
+  scale_y_continuous(sec.axis = sec_axis(transform = ~./10,
+                                         name = "Precio kWh")) +
+  labs(title = "Evolución del precio promedio de la electricidad (kWh) en el mercado mayorista y las \n precipitaciones anuales en Colombia\n(1996 - 2020)\n",
+       subtitle = NULL,
+       y = "Milimetros (mm)",
+       x = NULL,
+       caption = "Fuente: elaboración propia en base a XM, Banco Mundial y Banrep") +
+  theme(text = element_text(family = "Cambria"),
+        plot.title = element_text(hjust = 0.5, size = 12),
+        plot.caption = element_text(size=7, hjust=0.0, face="italic", color="black"),
+        axis.text.x = element_text(size = 9, angle = 0),
+        axis.text.y = element_text(size = 7, color = "#395FA5"),
+        axis.text.y.right = element_text(size = 7, color = "#A54339"),
+        axis.title.y = element_text(size = 10, color = "#395FA5"),
+        axis.title.y.right = element_text(size = 10, color = "#A54339"),
+        panel.background = element_rect(fill = "gray95"),
+        panel.grid = element_line(linetype = "dashed",
+                                  color = "gray60"),
+        plot.background = element_rect(fill = "gray95"))
+
+g
+
+```
+
+### Exportamos gráfico
+
+```{r}
+
+# ggsave(filename = "vizTidyverso/grafico_doble_eje.png",
+#        plot = g,
+#        width = 8,
+#        height = 5,
+#        dpi = 500)
+
+
+```
+
