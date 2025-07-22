@@ -1,0 +1,271 @@
+---
+title: "Ejercicio Práctico Módulos 1 y 2 - Manipulación de Bases de Datos y Análisis Univariado"
+format: html
+editor: visual
+---
+
+La base de Latinobarometro es una encuesta de opinión pública que para el año 2023 encuesto a más de $19.000$ personas en 17 países de Latinoamérica. Utilizando esta base deberás resolver los siguientes ejercicios, los cuales te servirán para afianzar el conocimiento adquirido hasta ahora respecto a manipulación de bases de datos y análisis univariado.
+
+```{r}
+rm(list = ls())
+
+library(foreign)
+library(tidyverse)
+
+base <- read.dta(file = "bases/Latinobarometro_2023_Esp_Stata_v1_0.dta")
+
+base %>% glimpse()
+```
+
+
+### Punto 1:
+
+¿Cuáles son los 17 países en los que se realizó la encuesta durante 2023?
+
+(**pista:** la variable de interés para dar respuesta es `idenpa`)
+
+```{r}
+
+unique(base$idenpa)
+
+base %>% 
+  select(idenpa) %>% 
+  distinct()
+
+```
+
+
+### Punto 2:
+
+Genera una tabla en la que se muestre cuantos hombres y cuantas mujeres contestaron la encuesta en Colombia, México y Argentina.
+
+(**pista:** debes obtener una frecuencia absoluta teniendo en cuenta dos variables categóricas y generar un filtro para los países especificados)
+
+```{r}
+
+base %>% 
+  group_by(idenpa, sexo) %>% 
+  tally() %>% 
+  filter(idenpa %in% c(" Argentina", " Colombia", " Mexico")) %>% 
+  spread(key = sexo, value = n)
+
+
+```
+
+
+### Punto 3:
+
+La variable `S10` es la edad a la cual el encuestado terminó su educación de tiempo completo, sin embargo, muchos de los encuestados aún están en etapa de formación, en estos casos se asignó el valor de $-6$. Creé una variable con el nombre `edad_educ` que reemplacé el valor de $-6$ por un $0$. Hecho eso genera el `summary` de la variable.
+
+(**pista:** debes crear una variable a partir de una condición lógica sobre la variable `S10`)
+
+```{r}
+
+summary(base$S10)
+
+base <- base %>% 
+  mutate(edad_educ = ifelse(test = S10 < 0,
+                            yes = 0,
+                            no = S10))
+
+summary(base$edad_educ)
+
+```
+
+
+### Punto 4: 
+
+La variable `P61ST` pide una opinión sobre el nivel de desigualdad en el país en una escala del 1 al 10, donde 1 es completamente inaceptable y 10 es completamente aceptable (tiene también valores para 'No sabe' y 'No contesta'). Aunque es una variable categórica, podría ser tratada como numérica, transforme esta variable en numérica con el nombre `des_num` y obtén el promedio por país.
+
+(**pista:** debes trabajar sobre las opciones de respuesta que tienen texto en la variable, terminada esa transformación utiliza `as.numeric` para convertir el valor en numérico)
+
+
+```{r}
+
+unique(base$P61ST)
+
+base <- base %>% 
+  mutate(des_num_pre = str_sub(string = P61ST, start = 1, end = 2),
+         des_num = case_when(des_num_pre == "01" ~ "1",
+                             des_num_pre == "No" ~ NA,
+                             TRUE ~ des_num_pre))
+
+base$des_num <- as.numeric(base$des_num)
+
+summary(base$des_num)
+
+base %>% 
+  group_by(idenpa) %>% 
+  summarise(media = mean(des_num, na.rm = T)) %>% 
+  arrange(-media)
+
+```
+
+
+### Punto 5:
+
+La variable `P16ST` pide al encuestado que se defina ideológicamente entre izquierda y derecha en una escala del 0 al 10, donde 0 es completamente de izquierda y 10 es completamente de derecha, genera una variable categórica con el nombre `cat_ideo` que cumpla con las siguientes condiciones:
+
+| Izquierda | Centro | Derecha |
+|:---------:|:------:|:-------:|
+| De 0 al 3 | Entre 4 y 6 | De 7 al 10 |
+
+Ten presente que pueden haber valores en caso de que la persona no sepa que responder o no desee contestar.
+
+(**pista:** es conveniente utilizar la función `case_when` para evaluar los valores de `P16ST` y establecer las categorías izquierda, centro y derecha)
+
+```{r}
+
+ideo <- unique(base$P16ST)
+
+length(ideo)
+
+ideo <- sort(ideo)
+
+base <- base %>% 
+  mutate(cat_ideo = case_when(
+    P16ST %in% ideo[c(1,2,14)] ~ "NR",
+    P16ST %in% ideo[3:6] ~ "Izquierda",
+    P16ST %in% ideo[7:9] ~ "Centro",
+    P16ST %in% ideo[10:13] ~ "Derecha"
+  ))
+
+summary(base$cat_ideo)
+
+base$cat_ideo <- factor(x = base$cat_ideo,
+                        levels = c("Izquierda", "Centro", "Derecha", "NR"))
+
+summary(base$cat_ideo)
+
+```
+
+### Punto 6:
+
+De las votaciones recientes en distintos países del mundo, se habla de una 'derechización' de hombres jóvenes, la variable `reedad` divide a la población en cuatro rangos etarios, obtén el porcentaje de hombres de derecha, centro e izquierda, desagregándolo por los rangos etarios de `reedad`.
+
+(**pista:** ten presente que te están preguntando solo por los hombres)
+
+```{r}
+
+tabla6 <- base %>% 
+  group_by(sexo, reedad, cat_ideo) %>% 
+  tally() %>% 
+  ungroup() %>% 
+  group_by(sexo, reedad) %>% 
+  mutate(total = sum(n),
+         porcentaje = n/total)
+
+
+tabla6 %>% 
+  filter(sexo == "Mujer") %>% 
+  select(-n, -total) %>% 
+  filter(cat_ideo == "Derecha")
+
+```
+
+### Punto 7:
+
+La variable `P62ST.10` pide evaluar a Donald Trump en una escala del 0 al 10, donde 0 significa 'muy mal' y 10 es 'muy bien'. Esta es una figura vinculada ideológicamente con la derecha, obtén el promedio y el desvió estándar de la calificación desagregando el análisis por la variable `cat_ideo` que construiste en el punto 5.
+
+(**pista:** para obtener ese promedio debes asegurarte de que `P62ST.10` es de tipo numérica)
+
+```{r}
+
+unique(base$P62ST_10)
+
+base <- base %>% 
+  mutate(donald = str_sub(string = P62ST_10, start = 1, end = 2),
+         donald_num = as.numeric(donald))
+
+base %>% 
+  select(P62ST_10, donald, donald_num)
+
+
+base %>% 
+  group_by(cat_ideo) %>% 
+  summarise(media_donald = mean(donald_num, na.rm = T),
+            desvio_donald = sd(donald_num, na.rm = T))
+
+```
+
+### Punto 8:
+
+Genera un gráfico de barras que muestre el porcentaje de personas por país, que considera que la llegada de inmigrantes los beneficia (variable `P32INN`).
+
+(**pista:** primero debes calcular los porcentajes, después filtrar los casos de 'Lo beneficia' y por último graficar)
+
+```{r}
+
+unique(base$P32INN)
+
+base %>% 
+  group_by(idenpa, P32INN) %>% 
+  tally() %>% 
+  mutate(total = sum(n),
+         porcentaje = n/total) %>% 
+  filter(P32INN == "Lo beneficia") %>% 
+  ggplot(mapping = aes(x = porcentaje, 
+                       y = reorder(idenpa, porcentaje))) +
+  geom_col() +
+  geom_text(mapping = aes(x = porcentaje + 0.03,
+                          label = str_c(round(porcentaje*100, 1), "%")))
+
+
+```
+
+### Punto 9:
+
+Muestra gráficamente la distribución de la calificación de Donald Trump según categoría ideológica.
+
+(**pista:** aprovecha lo que hiciste en el punto 7, si hiciste bien las cosas deberías poder entrar a graficar utilizando la variable `cat_ideo` del punto 5 y la variable en formato numérico de la respuesta a `P62ST.10`)
+
+
+```{r}
+
+g <- base %>% 
+  filter(cat_ideo != "NR") %>% 
+  ggplot(mapping = aes(x = donald_num,
+                       y = ..density..)) +
+  geom_histogram(color = "black",
+                 fill = "gray90",
+                 width = 1.2
+                 ) +
+  geom_density(mapping = aes(fill = cat_ideo,
+                             color = cat_ideo),
+               alpha = 0.5,
+               show.legend = F) +
+  labs(title = "Distribución de la calificación de Donald Trump en Latinoamérica\nsegún categoría ideológica\n",
+       x = "Calificación de 0 a 10, siendo 0 'muy mala' y 10 'muy buena'",
+       y = "Densidad",
+       caption = "Fuente: Latinobarometro 2023\nElaboración: @GEsteban_Gomez") +
+  facet_wrap(~ cat_ideo) +
+  scale_color_manual(values = c("darkblue", "darkgreen", "darkred")) +
+  scale_fill_manual(values = c("darkblue", "darkgreen", "darkred")) +
+  scale_x_continuous(breaks = c(0,5,10),
+                     labels = c("0", "5", "10")) +
+  theme(text = element_text(family = "Cambria"),
+        axis.text = element_text(size = 12, color = "black"),
+        axis.title.y = element_text(margin = margin(r = 10), size = 13),
+        axis.title.x = element_text(margin = margin(t = 13)),
+        plot.title = element_text(hjust = 0.5, size = 18),
+        plot.caption = element_text(hjust = 0, size =8, color = "gray20"),
+        strip.background = element_rect(fill = alpha("gray95", 0.2),
+                                        color = "cyan4"),
+        strip.text = element_text(size = 12),
+        panel.background = element_rect(fill = alpha("gray90")),
+        plot.background = element_rect(fill = alpha("gray95")),
+        panel.grid = element_line(color = "gray80", linetype = "longdash"))
+
+
+g
+
+ggsave(filename = "grafico_trump.png",
+       plot = g,
+       dpi = 500,
+       width = 9,
+       height = 6)
+
+```
+
+
+
