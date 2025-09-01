@@ -1,0 +1,325 @@
+---
+title: "Practico Módulo 1: Funciones y Procesos Iterados"
+subtitle: "Programación funcional y estadística avanzada"
+author: "Gerardo Esteban, Gómez-Santiago"
+date: "August 29, 2025"
+toc: true
+format: 
+  html:
+    html-math-method: katex
+    code-tools: true
+    self-contained: true
+execute:
+  warning: false
+---
+
+## Introducción
+
+En el módulo 1 del curso sobre Programación Funcional y Estadística Avanzada con R, vimos la creación de funciones y procesos iterados, algo que reduce la posibilidad de errores y optimiza nuestro flujo de trabajo, a continuación te propongo tres ejercicios para que pongas en práctica lo que vimos en clase.
+
+## Ejercicio 1
+
+En la inferencia estadística buscamos establecer el valor probable de parametros poblacionales, a partir de valores muestrales. Es algo bastante útil que permite tener una mejor noción sobre el comportamiento de una variable. El cálculo es bastante sencillo, solo debemos sumar y restar un valor `x` a la media o proporción obtenida de los datos que tenemos.
+
+Partiendo de la base `decathlon` con la que trabajamos en la primer sesión, el intervalo de confianza para la media de la variable `Discus` sería algo parecido a esto.
+
+```{r}
+
+library(tidyverse)
+library(FactoMineR)
+
+data('decathlon')
+
+decathlon %>% glimpse()
+
+decathlon %>% 
+  summarise(media = mean(Discus),
+            desvio = sd(Discus),
+            tamanio = n()) %>% 
+  mutate(quantil = qt(0.975, df = tamanio - 1),
+         error_estandar = desvio/sqrt(tamanio),
+         margen_error = quantil*error_estandar,
+         limite_inf = media - margen_error,
+         limite_sup = media + margen_error) %>% 
+  select(media, limite_inf, limite_sup)
+
+```
+
+Como ves, cuando calculamos un intervalo de confianza, obtenemos un límite inferior y un límite superior que con cierta probabilidad contiene el valor poblacional.
+
+Reutiliza el código anterior para crear una función en donde puedas ingresar cualquiera de las variables de la base y obtengas una tabla como la que se muestra, con la media, el límite inferior y el límite superior. Corrobora que funciona con al menos tres variables.
+
+### Solución
+
+```{r}
+#| code-fold: TRUE
+
+# Partir de lo concreto y pasarlo a lo abstracto
+
+decathlon %>% 
+  summarise(media = mean(Discus),
+            desvio = sd(Discus),
+            tamanio = n()) %>% 
+  mutate(quantil = qt(0.975, df = tamanio - 1),
+         error_estandar = desvio/sqrt(tamanio),
+         margen_error = quantil*error_estandar,
+         limite_inf = media - margen_error,
+         limite_sup = media + margen_error) %>% 
+  select(media, limite_inf, limite_sup)
+
+
+# 1. Nombre de la función
+# 2. Argumentos de la función
+# 3. Proceso a aplicar
+
+
+inter_var <- function(df, var) {
+  
+  resultado <- df %>% 
+  summarise(media = mean(.data[[var]]),
+            desvio = sd(.data[[var]]),
+            tamanio = n()) %>% 
+  mutate(quantil = qt(0.975, df = tamanio - 1),
+         error_estandar = desvio/sqrt(tamanio),
+         margen_error = quantil*error_estandar,
+         limite_inf = media - margen_error,
+         limite_sup = media + margen_error) %>% 
+  select(media, limite_inf, limite_sup) %>% 
+  mutate(variable = var) %>% 
+  relocate(variable, .before = media)
+  
+  return(resultado)
+  
+}
+
+inter_var(df = decathlon, var = "Discus")
+inter_var(df = decathlon, var = "100m")
+inter_var(df = decathlon, var = "Javeline")
+
+```
+
+## Ejercicio 2
+
+Ahora implementa un proceso iterado en el que apliques la función que creaste sobre las 10 pruebas del **decathlon**. 
+
+Mi recomendación es que almacenes los nombres en un vector, posteriormente puedes seguir los pasos para generar un proceso iterado con `for` (generar un contenedor y definir el recorrido y el proceso) o puedes implementar el proceso iterado con la función `map` de la librería `purrr`, donde no es necesario definir explicitamente el contenedor y el recorrido.
+
+### Solución
+
+```{r}
+#| code-fold: TRUE
+
+
+# solucion utilizando for
+
+vec_vars <- names(decathlon)
+vec_vars <- vec_vars[1:10]
+
+contenedor <- vector(mode = "list", length = length(vec_vars))
+
+for (indice in seq_along(vec_vars)) {
+  
+  variable <- vec_vars[indice]
+  
+  tabla <- inter_var(df = decathlon, 
+                     var = variable)
+  
+  contenedor[[indice]] <- tabla
+
+}
+
+base_res <- contenedor %>% bind_rows()
+
+
+# solucion utilizando map
+
+result_map <- map(.x = vec_vars,
+                  .f = ~{
+                    
+                    inter_var(df = decathlon, var = .x)
+                    
+                  }) 
+
+base_map <- map_dfr(.x = vec_vars,
+                  .f = ~{
+                    
+                    inter_var(df = decathlon, var = .x)
+                    
+                  })
+
+
+```
+
+## Ejercicio 3
+
+Ahora vamos a utilizar la segunda base de datos de la sesión 1 (`Credit.csv`). En está tenemos varias variables categóricas de dos niveles. Puntualmente tenemos `Own`, `Student` y `Married`. 
+
+El objetivo del ejercicio es aplicar pruebas de diferencia de medias comparando el promedio de las variables cuantitativas `Income`, `Limit`, `Rating`, `Cards`, `Age`, `Education` y `Balance`, entre las categorias de las variables categóricas ya mencionadas.
+
+La función para calcular la prueba de diferencia de medias es `t.test()`.
+
+```{r}
+
+# Carga de la base
+
+credito <- read.csv(file = "Credit.csv")
+
+credito %>% glimpse()
+
+# Prueba de diferencia de medias comparando Income entre Student
+
+t.test(Income ~ Student,
+       data = credito)
+
+
+```
+
+Como ves, devuelve un texto, lo ideal sería que logres construir una tabla donde aparezca, la media del grupo 1, la media del grupo 2, la diferencia de las medias y el p-valor. Abajo un código que hace eso
+
+```{r}
+
+credito %>% 
+  t.test(Income ~ Own,
+         data = .) %>% 
+  broom::tidy() %>% 
+  select(estimate1, estimate2, estimate, p.value) %>% 
+  mutate(significatividad = ifelse(test = p.value < 0.05,
+                                   yes = "Significativo",
+                                   no = "No Significativo"))
+
+```
+
+Este código sería como el ejemplo concreto, pensando en el resultado, faltaría añadir una variable que diga cual es la variable categórica y una que diga cual es la variable continua.
+Obviamente el objetivo es iterar, entonces te dejo un pseudo-código con mis sugerencias respecto a lo que deberías tener en cuenta.
+
+```{r}
+
+# var_cat <- vector que contenga las variables categóricas
+# var_num <- vector que contenga las variables numéricas
+
+# Deberias aplicar algunas transformaciones sobre esos vectores
+# de manera que queden todos los emparejamientos posibles
+# Income ~ Own, Balance ~ Own, ... , Limit ~ Own
+# Income ~ Student, Balance ~ Student, ... , Limit ~ Student
+# Income ~ Married, 
+
+# Define una función que reciba las variables, aplique el t.test()
+# y devuelva la tabla
+
+# t_funcion <- function(var_num, var_cat) {
+# 
+# credito %>% 
+#   t.test(Income ~ Own,
+#          data = .) %>% 
+#   broom::tidy() %>% 
+#   select(estimate1, estimate2, estimate, p.value) %>% 
+#   mutate(significatividad = ifelse(test = p.value < 0.05,
+#                                    yes = "Significativo",
+#                                    no = "No Significativo"))
+#
+#  }
+
+
+# Aplica el proceso iterado, mi recomendación es usar 'map2'
+# un argumento debería ser tu variable continua, el otro tu variable categórica
+
+# Un ejemplo según la función anterior sería algo así
+
+# res <- map2(.x = var_cat,
+#             .y = var_num,
+#             .f = ~{
+#               
+#               resultado <- t_fun(var_num = .y,
+#                                  var_cat = .x)
+#               
+#               
+#             })
+
+```
+
+### Solución
+
+```{r}
+#| code-fold: TRUE
+
+
+vec_num <- c("Income", "Rating", "Balance", "Cards", "Age", "Education", "Limit")
+vec_cat <- c("Student", "Married", "Own")
+
+vec_num <- rep(vec_num, 3)
+vec_cat <- rep(vec_cat, 7)
+
+vec_cat <- sort(vec_cat)
+
+vec_cat
+vec_num
+
+t_medias_funcion <- function(base, var_num, var_cat) {
+
+  formula_prueba <- as.formula(paste(var_num, "~", var_cat))
+  
+  prueba <- base %>%
+    t.test(formula_prueba,
+           data = .) %>%
+    broom::tidy() %>%
+    select(estimate1, estimate2, estimate, p.value) %>%
+    mutate(significatividad = ifelse(test = p.value < 0.05,
+                                     yes = "Significativo",
+                                     no = "No Significativo"),
+           variable_num = var_num,
+           variable_cat = var_cat) %>% 
+    relocate(variable_num, .before = estimate1) %>% 
+    relocate(variable_cat, .before = variable_num)
+  
+  return(prueba)
+
+ }
+
+
+t_medias_funcion(base = credito, var_num = "Income", var_cat = "Student")
+t_medias_funcion(base = credito, var_num = "Balance", var_cat = "Married")
+
+
+vec_num
+vec_cat
+
+
+res <- map2(.x = vec_cat,
+            .y = vec_num,
+            .f = ~{
+
+              resultado <- t_medias_funcion(base = credito,
+                                            var_num = .y,
+                                            var_cat = .x)
+
+
+              return(resultado)
+              
+            })
+
+tabla_res <- res %>% bind_rows()
+
+tabla_res
+
+
+
+# Rsultado almacenado en data.frame o tibble
+
+tabla_directa_map <- map2_dfr(.x = vec_cat,
+                              .y = vec_num,
+                              .f = ~{
+                  
+                                resultado <- t_medias_funcion(base = credito,
+                                                              var_num = .y,
+                                                              var_cat = .x)
+                  
+                  
+                                return(resultado)
+                                
+                                })
+
+tabla_directa_map
+
+
+```
+
