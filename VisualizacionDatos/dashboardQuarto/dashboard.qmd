@@ -1,0 +1,467 @@
+---
+title: "Tolerancia a la democracia en América Latina"
+format: 
+  dashboard:
+    orientation: columns
+    scrolling: false
+    theme: 
+    - spacelab
+    - dashboardStyle.scss
+    embed-resources: true
+    self-contained-math: true
+editor: visual
+---
+
+```{r}
+
+library(tidyverse)
+library(ggspatial)
+library(sf)
+library(extrafont)
+library(classInt)
+library(ggtext)
+library(gt)
+
+load(file = "baseFinal.RData")
+load(file = "dataMapa.RData")
+
+breaks <- classIntervals(var = mapa$frecRel,
+                         n = 8,
+                         style = "pretty")
+
+breaks <- breaks$brks
+
+colores <- hcl.colors(n = length(breaks),
+                      palette = "Earth")
+
+# scales::show_col(colores)
+
+textura <- colorRampPalette(colors = colores)(600)
+
+# scales::show_col(textura, labels = F)
+
+mapa$leyenda <- str_c(mapa$idenpa, ": ", round(mapa$frecRel*100,1), "%")
+
+```
+
+# Resultados
+
+## Barra Lateral {.sidebar}
+
+En esta infografía esta basada en la encuesta de Latinobarometro del año 2020 y 2023.
+
+Los porcentajes mostrados hacen referencia a la pregunta:
+
+Esta de acuerdo con la afirmación **"...la democracia puede tener sus problemas, pero es el mejor sistema de gobierno..."**
+
+Para realizar el cálculo de frecuencias se agruparon las respuestas `De acuerdo` y `Muy de acuerdo` en **Acuerdo** y `En desacuerdo` y `Muy en desacuerdo` en **Desacuerdo**.
+
+El valor de Nicaragua corresponde a la encuesta de 2020.
+
+Elaboración: Gerardo Esteban Gómez-Santiago
+
+## Columna con mapa {width="40%"}
+
+### Mapa regional
+
+```{r}
+#| title: Mapa Regional
+#| fig-width: 8
+#| fig-height: 8
+
+g1 <- mapa %>% 
+  ggplot() +
+  geom_sf(mapping = aes(fill = frecRel*100)) +
+  scale_fill_gradientn(name = "% Acuerdo",
+                       colors = textura) +
+  annotation_north_arrow(location = "tr",
+                         width = unit(0.6, "cm"),
+                         height = unit(0.7, "cm"),
+                         style = north_arrow_fancy_orienteering) +
+  theme(text = element_text(family = "Century"),
+        axis.text = element_blank(),
+        axis.ticks = element_blank(),
+        panel.background = element_rect(fill = alpha(colores[7], 0.3)),
+        plot.background = element_rect(fill = alpha(colores[5], 0.4),
+                                       color = alpha(colores[5], 0.4)),
+        panel.grid = element_line(linetype = "longdash",
+                                  color = colores[9]),
+        legend.position = "inside",
+        legend.position.inside = c(0.15, 0.4),
+        legend.background = element_rect(fill = "white", color = colores[1]),
+        legend.key.size = unit(c(1.2), "cm"),
+        legend.text = element_text(size = 12),
+        legend.title = element_text(hjust = 0.5, size = 14))
+
+g1
+
+```
+
+## Columna con barras {width="60%"}
+
+### Cajas por sexo {height="20%"}
+
+```{r}
+#| label: preparo-valores
+
+ValHombre <- tFinal %>% 
+  group_by(sexo) %>% 
+  summarise(mean = mean(frecRel)*100) %>% 
+  filter(sexo == "Hombre")
+
+ValGeneral <- tFinal %>% 
+  group_by(sexo) %>% 
+  summarise(mean = mean(frecRel)*100) %>% 
+  filter(sexo == "General")
+
+ValMujer <- tFinal %>% 
+  group_by(sexo) %>% 
+  summarise(mean = mean(frecRel)*100) %>% 
+  filter(sexo == "Mujer")
+
+```
+
+::: {.valuebox color="#51b8df"}
+\% de Acuerdo en Hombres:
+
+`r str_c(round(ValHombre$mean,1), "%")`
+:::
+
+::: {.valuebox color="#df51a3"}
+\% de Acuerdo en Mujeres:
+
+`r str_c(round(ValMujer$mean,1), "%")`
+:::
+
+::: {.valuebox color="#6ddf51"}
+\% de Acuerdo General:
+
+`r str_c(round(ValGeneral$mean,1), "%")`
+:::
+
+### Barras general {.tabset height="80%"}
+
+::: {.card title="Ranking general"}
+Los países del cono sur, son los que muestran mayor aprobación con esta afirmación.
+
+```{r}
+#| fig-height: 4
+#| fig-width: 9
+g2 <- mapa %>% 
+  ggplot(mapping = aes(x = frecRel*100, y = reorder(idenpa, frecRel))) +
+  geom_col(mapping = aes(fill = frecRel),
+           color = "black",
+           show.legend = F) +
+  geom_text(mapping = aes(x = frecRel*100 + 5,
+                          label = str_c(round(frecRel*100, 1), "%")),
+            size = 3.5,
+            family = "Century") +
+  labs(y = NULL,
+       x = "% de Acuerdo") +
+  scale_y_discrete(position = "left") +
+  scale_fill_gradientn(colors = textura) +
+  scale_x_continuous(n.breaks = 10) +
+  theme(text = element_text(family = "Century"),
+        panel.grid.major.x = element_blank(),
+        panel.grid.minor.x = element_blank(),
+        panel.grid.major.y = element_line(linetype = "longdash",
+                                          color = alpha(colores[9], 0.3)),
+        plot.background = element_rect(fill = alpha(colores[5], 0.4),
+                                       color = alpha(colores[5], 0.4)),
+        panel.background = element_rect(fill = alpha(colores[7], 0.3)))
+
+g2
+
+```
+:::
+
+::: {.card title="Variación en el porcentaje de acuerdo respecto al 2020"}
+Aunque el promedio general creció, en 7 de 17 paises se redujo el acuerdo con esta afirmación.
+
+```{r}
+#| title: Variación en el porcentaje de acuerdo respecto al 2020
+#| fig-height: 4
+#| fig-width: 11
+
+viz <- tFinal %>% 
+  filter(iso3c != "NIC") %>% 
+  select(idenpa, iso3c, sexo, frecRel, year) %>% 
+  spread(key = sexo, value = frecRel)
+
+viz2 <- viz %>% 
+  select(-Hombre, -Mujer) %>% 
+  spread(key = year, value = General) %>% 
+  mutate(variacion = (`2023` - `2020`)*100)
+
+viz3 <- viz2 %>% 
+  mutate(lugar_etiqueta = ifelse(test = variacion > 0,
+                                 yes = -0.5,
+                                 no = 0.5))
+
+
+g4 <- viz2 %>% 
+  ggplot(mapping = aes(x = variacion, y = reorder(iso3c, variacion))) +
+  geom_col(mapping = aes(fill = variacion),
+           show.legend = F,
+           color = "black") +
+  scale_fill_gradientn(colors = textura) +
+  geom_text(data = viz3,
+            mapping = aes(x = lugar_etiqueta,
+                          y = reorder(iso3c, variacion),
+                          label = iso3c),
+            family = "Century",
+            size = 3.5,
+            color = "gray20") +
+  geom_text(data = viz3,
+            mapping = aes(x = variacion - lugar_etiqueta,
+                          y = reorder(iso3c, variacion),
+                          label = str_c(round(variacion,1), "%")),
+            family = "Century",
+            size = 3.5) +
+  labs(
+    # subtitle = "Aunque el promedio de toda la región creció, en\n7 de 17 países hubo una disminución entre el\n2020 y el 2023",
+       y = NULL,
+       x = NULL) +
+  theme(text = element_text(family = "Century"),
+        plot.subtitle = element_text(size = 10),
+        axis.text.y = element_blank(),
+        axis.ticks.y = element_blank(),
+        panel.grid.major.y = element_line(linetype = "longdash",
+                                          color = alpha(colores[9], 0.3)),
+        panel.grid.minor.x = element_blank(),
+        panel.grid.major.x = element_line(linetype = "longdash",
+                                          color = alpha(colores[9], 0.3)),
+        plot.background = element_rect(fill = alpha(colores[5], 0.4),
+                                       color = alpha(colores[5], 0.4)),
+        panel.background = element_rect(fill = alpha(colores[7], 0.3)))
+
+
+g4
+
+```
+:::
+
+# Otros datos
+
+## Diferencias por país y sexo
+
+### Cajas con max-min {height="25%"}
+
+```{r}
+
+valorMaxH <- max(tFinal$frecRel[tFinal$sexo == "Hombre" & tFinal$year == 2023])
+paisMaxH <- tFinal$idenpa[tFinal$sexo == "Hombre" & tFinal$frecRel == valorMaxH]
+
+valorMinH <- min(tFinal$frecRel[tFinal$sexo == "Hombre"& tFinal$year == 2023])
+paisMinH <- tFinal$idenpa[tFinal$sexo == "Hombre" & tFinal$frecRel == valorMinH]
+
+valorMaxM <- max(tFinal$frecRel[tFinal$sexo == "Mujer"& tFinal$year == 2023])
+paisMaxM <- tFinal$idenpa[tFinal$sexo == "Mujer" & tFinal$frecRel == valorMaxM]
+
+valorMinM <- min(tFinal$frecRel[tFinal$sexo == "Mujer"& tFinal$year == 2023])
+paisMinM <- tFinal$idenpa[tFinal$sexo == "Mujer" & tFinal$frecRel == valorMinM]
+
+```
+
+::: {.valuebox icon="gender-male" color="#51b8df"}
+Máximo:
+
+`r str_c(paisMaxH, ": ", round(valorMaxH*100,1), "%")`
+:::
+
+::: {.valuebox icon="gender-male" color="#59889a"}
+Mínimo:
+
+`r str_c(paisMinH, ": ", round(valorMinH*100,1), "%")`
+:::
+
+::: {.valuebox icon="gender-female" color="#df51a3"}
+Máximo:
+
+`r str_c(paisMaxM, ": ", round(valorMaxM*100,1), "%")`
+:::
+
+::: {.valuebox icon="gender-female" color="#9b6684"}
+Mínimo:
+
+`r str_c(paisMinM, ": ", round(valorMinM*100,1), "%")`
+:::
+
+### Grafico todos {.tabset height="75%"}
+
+::: {.card title="Diferencias 2020"}
+```{r}
+#| title: Diferencias por país y sexo
+#| fig-height: 4.5
+#| fig-width: 9
+
+viz <- tFinal %>% 
+  filter(iso3c != "NIC") %>% 
+  select(idenpa, iso3c, sexo, frecRel, year) %>% 
+  spread(key = sexo, value = frecRel)
+
+g3 <- viz %>% 
+  filter(year == 2020) %>% 
+  ggplot(mapping = aes(x = General, y = reorder(idenpa, General))) +
+  geom_point(color = alpha("olivedrab4", 0.4)) +
+  geom_point(mapping = aes(x = Mujer, 
+                           y = idenpa),
+             color = "maroon") +
+  geom_point(mapping = aes(x = Hombre,
+                           y = idenpa),
+             color = "slateblue") +
+  geom_segment(mapping = aes(x = Mujer, y = idenpa,
+                             xend = Hombre, yend = idenpa),
+               linetype = "dotted",
+               color = colores[1]) +
+  # facet_wrap(~ year) +
+  labs(subtitle = "En el 2020 el porcentaje de aprobación de los <span style = 'color:slateblue;'>Hombres</span> fue en todos los paises mayor al de las <span style = 'color:maroon;'>Mujeres</span>.",
+       y = NULL,
+       x = "Porcentaje de acuerdo") +
+  theme(text = element_text(family = "Century"),
+        plot.subtitle = element_markdown(size = 10),
+        panel.grid.major.x = element_line(linetype = "longdash",
+                                          color = alpha(colores[9], 0.3)),
+        panel.grid.minor = element_blank(),
+        panel.grid.major.y = element_blank(),
+        plot.background = element_rect(fill = alpha(colores[5], 0.4)),
+        panel.background = element_rect(fill = alpha(colores[7], 0.3)),
+        strip.background = element_rect(fill = alpha(colores[1],0.4),
+                                        color = colores[1]),
+        strip.text = element_text(color = colores[9]))
+
+g3
+
+```
+:::
+
+::: {.card title="Diferencias 2023"}
+```{r}
+#| fig-height: 4.5
+#| fig-width: 9
+
+g4 <- viz %>% 
+  filter(year == 2023) %>% 
+  ggplot(mapping = aes(x = General, y = reorder(idenpa, General))) +
+  geom_point(color = alpha("olivedrab4", 0.4)) +
+  geom_point(mapping = aes(x = Mujer, 
+                           y = idenpa),
+             color = "maroon") +
+  geom_point(mapping = aes(x = Hombre,
+                           y = idenpa),
+             color = "slateblue") +
+  geom_segment(mapping = aes(x = Mujer, y = idenpa,
+                             xend = Hombre, yend = idenpa),
+               linetype = "dotted",
+               color = colores[1]) +
+  # facet_wrap(~ year) +
+  labs(subtitle = "Para el 2023 el porcentaje de aprobación de las <span style = 'color:maroon;'>Mujeres</span> fue mayor al de los <span style = 'color:slateblue;'>Hombres</span> en Chile y Argentina.",
+       y = NULL,
+       x = "Porcentaje de acuerdo") +
+  theme(text = element_text(family = "Century"),
+        plot.subtitle = element_markdown(size = 10),
+        panel.grid.major.x = element_line(linetype = "longdash",
+                                          color = alpha(colores[9], 0.3)),
+        panel.grid.minor = element_blank(),
+        panel.grid.major.y = element_blank(),
+        plot.background = element_rect(fill = alpha(colores[5], 0.4)),
+        panel.background = element_rect(fill = alpha(colores[7], 0.3)),
+        strip.background = element_rect(fill = alpha(colores[1],0.4),
+                                        color = colores[1]),
+        strip.text = element_text(color = colores[9]))
+
+g4
+
+
+```
+:::
+
+## Diferencias por rangos de edad y sexo
+
+### Grafico de cajas por edad y sexo
+
+```{r}
+#| title: Diferencias por edad y sexo
+#| fig-width: 10
+#| fig-height: 3
+
+load(file = "baseEdades.RData")
+
+g5 <- baseEdades %>% 
+  ggplot(mapping = aes(x = sexo, y = frecRel*100)) +
+  geom_boxplot(mapping = aes(fill = sexo,
+                             color = sexo),
+               show.legend = F) +
+  geom_jitter(mapping = aes(color = sexo),
+              show.legend = F) +
+  scale_fill_manual(values = c(alpha("slateblue", 0.5), alpha("maroon", 0.5))) +
+  scale_color_manual(values = c("slateblue", "maroon")) +
+  scale_y_continuous(n.breaks = 10) +
+  facet_wrap(~reedad, ncol = 4) +
+  labs(x = NULL,
+       y = "% de Acuerdo") +
+  theme(text = element_text(family = "Century"),
+        plot.subtitle = element_markdown(size = 10),
+        panel.grid.major.x = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.grid.major.y = element_line(linetype = "longdash",
+                                          color = alpha(colores[9], 0.3)),
+        plot.background = element_rect(fill = alpha(colores[5], 0.4)),
+        panel.background = element_rect(fill = alpha(colores[7], 0.3)),
+        strip.background = element_rect(fill = alpha(colores[1],0.4),
+                                        color = colores[1]),
+        strip.text = element_text(color = colores[9], size = 12))
+
+g5
+
+```
+
+### Discusión
+
+```{r}
+#| title: Significatividad de las diferencias
+
+
+props <- baseEdades %>% 
+  ungroup() %>% 
+  group_by(reedad, sexo) %>% 
+  summarise(frecAbs = sum(n),
+            total = sum(total))
+
+valores <- unique(props$reedad)
+
+tablas <- map_dfr(.x = valores,
+              .f = ~{
+                
+                p <- props %>% 
+                  filter(reedad == .x)
+                
+                prueba <- prop.test(x = p$frecAbs, n = p$total)
+                
+                t <- tibble("Rango Edad" = .x,
+                            "% Hombres" = round(prueba$estimate[1]*100,1),
+                            "% Mujeres" = round(prueba$estimate[2]*100,1),
+                            "P-Valor" = round(prueba$p.value,4)) %>% 
+                  mutate(Significatividad = ifelse(test = `P-Valor` > 0.05,
+                                                   yes = "No Significativa",
+                                                   no = "Significativa"))
+                
+                
+                return(t)
+                
+              })
+
+tablas %>% 
+  gt() %>% 
+  data_color(columns = c("% Hombres"),
+             palette = alpha("slateblue", 0.5)) %>% 
+  data_color(columns = "% Mujeres",
+             palette = alpha("maroon", 0.5)) %>% 
+  tab_header(title = md("Pruebas de **Diferencia de Proporciones**")) %>% 
+  tab_source_note(source_note = md("Pruebas realizadas con un nivel de confianza del 95%")) %>% 
+  tab_style(
+    style = "font-weight: bold",
+    locations = cells_column_labels()
+  )
+
+```
