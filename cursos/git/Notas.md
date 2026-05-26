@@ -54,3 +54,25 @@ Siempre va primero el `add` y después el `commit`
 ¿Como puedo hacer que el proyecto retorne a una captura previa?
 
 - `git reset --hard 2533360`: Restaura el proyecto al instante almacenado con el código posterior a "hard"
+
+### Añadir todos los archivos al seguimiento
+
+¿Como puedo vincular todos los archivos de la carpeta al seguimiento del proyecto?
+
+- `git add .`: Con el punto despues del `add` se incluye la totalidad de los archivos al seguimiento.
+
+### Atajo para realizar un add y un commit al mismo tiempo 
+
+- `git commit -am "Descripción commit"`: Con este comando no es necesario separar los add de los commit.
+
+### Modificar la descripción de un commit
+
+1. abrir el editor vim
+2. Ejecutar el comando `:i`
+3. Suprimir la descripción existente
+4. Ejecutar el comando `:i`
+5. Escribir la nueva descripción + Enter
+6. Ejecutar el comando `:wq`
+
+
+
