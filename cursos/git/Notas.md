@@ -81,3 +81,7 @@ Siempre va primero el `add` y después el `commit`
     - `git remote add origin https://github.com/GomezGerardoEsteban/CursoGit.git`
     - `git push -u origin main`
 
+### Cambios en remoto que deben actualizarse en local
+
+Si se generó un cambio en remoto, es necesario copiar esos cambios a los archivos locales, eso se realiza con el comando `git pull`. No hace falta especificar nada más.
+
