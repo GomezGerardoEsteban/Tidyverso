@@ -85,3 +85,15 @@ Siempre va primero el `add` y después el `commit`
 
 Si se generó un cambio en remoto, es necesario copiar esos cambios a los archivos locales, eso se realiza con el comando `git pull`. No hace falta especificar nada más.
 
+## Generación de `tags`
+
+Los `tags` son fotografías completas de los proyectos a un momento dado, permite que desde GitHub se puedan descargar todos los archivos vinculados al proyecto. Para generarlos se utiliza:
+
+- `git push --tags`: En el inicio del proyecto en GitHub, está la pestaña de `tags` que indica cuantas versiones completas del proyecto se han ejecutado.
+
+## Clonación de repositorios de GitHub
+
+Si quieres copiar en local un proyecto que esta almacenado en GitHub.
+
+1. Copias la ruta del proyecto
+2. Ejecutas en el bash local `git clone ruta`
