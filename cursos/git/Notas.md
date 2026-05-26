@@ -74,5 +74,10 @@ Siempre va primero el `add` y después el `commit`
 5. Escribir la nueva descripción + Enter
 6. Ejecutar el comando `:wq`
 
+## Cargar el proyecto a `GitHub`
 
+1. Crear un repositorio en GitHub
+2. Ejecutar la primera y tercera línea del repositorio creado:
+    - `git remote add origin https://github.com/GomezGerardoEsteban/CursoGit.git`
+    - `git push -u origin main`
 
