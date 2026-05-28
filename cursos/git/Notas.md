@@ -97,3 +97,17 @@ Si quieres copiar en local un proyecto que esta almacenado en GitHub.
 
 1. Copias la ruta del proyecto
 2. Ejecutas en el bash local `git clone ruta`
+
+## Ramas o Branch
+
+Conceptualmente son caminos alternos del proyecto principal, permitiendo realizar pruebas o desarrollos complementarios sin afectar el código principal. Las ramas se conectan con el código principal en los `commits` que determinemos.
+
+Al comienzo, lo ideal es ajustar archivos distintos en distintas ramas, cuando se modifica el mismo archivo en distintas ramas, al momento de colapsar las ramas o hacer el `merge` entre ellas, surgen los conflictos sobre ¿Que cambios prevalecen?.
+
+- `git branch css`: Genera por ejemplo, una nueva rama para el archivo `css`.
+- `git branch`: Me permite consultar las ramas existentes y en cual de ellas me encuentro.
+- `git checkout css`: Me permite cambiar de rama, una vez ejecuto eso, los cambios que ejecute se almacenaran en la rama alternativa.
+
+El merge de las ramas se realiza siempre posicionado desde la rama principal (por defecto `main`) y utilizando el comando `merge`
+
+- `git merge css`: Va a buscar anexar el código modificado en `css` con la rama principal.
